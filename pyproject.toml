@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "app-foncier"
+version = "0.1.0"
+description = "API de l'app fonciere"
+authors = ["Remi Bhagalou"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.115.6"
+geopandas = "^1.0.1"
+pandas = "^2.2.3"
+requests = "^2.32.3"
+uvicorn = "^0.32.1"
+sqlalchemy = "^2.0.36"
+ogr = "^0.50.2"
+osr = "^0.0.1"
+gdal = "3.6.2"
+psycopg2-binary = "^2.9.10"
+geoalchemy2 = "^0.16.0"
+celery = "^5.4.0"
+pydantic = {extras = ["email"], version = "^2.10.3"}
+pyjwt = "^2.10.1"
+passlib = "^1.7.4"
+bcrypt = "^4.2.1"
+python-dotenv = "^1.0.1"
+python-multipart = "^0.0.20"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

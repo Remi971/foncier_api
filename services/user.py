@@ -1,0 +1,82 @@
+from fastapi import HTTPException, Depends, status
+from schema.users import Users_create, User_update, Users
+from models.users import User as user_model
+from sqlalchemy.orm import Session
+from dto.users import Roles
+from sqlalchemy.exc import DataError
+from datetime import datetime
+from services.auth import get_password_hash, verify_password, credentials, oauth2_scheme
+
+
+def create_user(body: Users_create, db: Session):
+    try:
+        newUser = body.model_dump()
+        print(newUser)
+        new_user = user_model(
+            firstname=newUser["firstname"], 
+            lastname=newUser["lastname"], 
+            email=newUser["email"], 
+            hashed_password=get_password_hash(newUser["password"]),
+            role=Roles.BASIC.value,
+            )
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return new_user
+    except Exception as error:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")
+    
+def authenticate_user(db, username: str, password: str):
+    user = get_user_by_email(db, username)
+    if not user:
+        return False
+    if not verify_password(password, user.hashed_password):
+        return False
+    return user
+
+async def get_current_user(db, token: str = Depends(oauth2_scheme)):
+    token_data = credentials(token)
+    try:
+        user = get_user_by_email(db, email=token_data.email)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return user
+    
+def get_user(id: str, db: Session):
+    try:
+        user = db.query(user_model).get({"id":id})
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found !")
+        return user
+    except DataError:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"invalid input syntax for type uuid: {id}")
+        
+def get_user_by_email(db, email: str):
+    user = db.query(user_model).get({"email": email})
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    try:
+        user_dict = user.model_dump()
+        return Users(**user_dict)
+    except Exception as error:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")
+
+def update_user(id:str, body: User_update, db):
+    newUser = body.model_dump()
+    print("newUser", newUser)
+    user = db.query(user_model).get({"id": id})
+    if not user:
+        raise HTTPException(status_code=404, detail=f"User not found !")
+    user.firstname = newUser["firstname"]
+    user.lastname = newUser["lastname"]
+    db.commit()
+    return user
+    
+    
+def delete_user(id: str, db):
+    try:
+        db.query(user_model).filter(user_model.id == id).delete()
+        db.commit()
+        return "User deleted"
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=error) 
