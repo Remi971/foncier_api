@@ -3,18 +3,23 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.event import listen
 from geoalchemy2 import load_spatialite
 from fastapi.security import OAuth2PasswordBearer
-import os
-from dotenv import load_dotenv
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-load_dotenv()
-
-DATABASE_URL_SQLITE = os.getenv("DATABASE_URL_SQLITE")
-engine = create_engine(DATABASE_URL_SQLITE)
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file='.env.development', env_file_encoding='utf-8')
+    DATABASE_URL_SQLITE: str
+    DATABASE_URL_POSTGRES: str
+    TOKEN_ALGORITHM: str
+    TOKEN_SECRET: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+    
+        
+settings = Settings()
+engine = create_engine(settings.DATABASE_URL_SQLITE)
 listen(engine, "connect", load_spatialite)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-DATABASE_URL_POSTGRES = os.getenv("DATABASE_URL_POSTGRES")
-engine_pgsql = create_engine(DATABASE_URL_POSTGRES)
+engine_pgsql = create_engine(settings.DATABASE_URL_POSTGRES)
 SessionLocalPgsql = sessionmaker(autocommit=False, autoflush=False, bind=engine_pgsql)
 
 # Dependency to get the database session

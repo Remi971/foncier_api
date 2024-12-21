@@ -1,21 +1,29 @@
 from fastapi import FastAPI, Path, Query, Depends
-from dependencies import oauth2_scheme
+from contextlib import asynccontextmanager
+from dependencies import oauth2_scheme, engine_pgsql
 from routers import data
 from routers import process
 from routers import users
 from routers import auth
+from models.users import Base
+
+@asynccontextmanager
+async def init_db(app: FastAPI):
+    print("##### init_db #####")
+    Base.metadata.create_all(bind=engine_pgsql)
+    yield
 
 app = FastAPI(
     title="Demo of testing FastApi",
     description="Exploration of fastapi framework and test of good practice",
     version="0.0.1",
+    lifespan=init_db
     )
 
 app.include_router(auth.router)
 app.include_router(data.router)
 app.include_router(process.router)
 app.include_router(users.router)
-
 
 @app.get('/')
 def read_root(token: str = Depends(oauth2_scheme)):

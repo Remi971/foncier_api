@@ -41,5 +41,5 @@ def processing(
         envelop_creation(body)
         return "Enveloppe created successfully"
     except Exception as error:
-        raise HTTPException(status_code=500, detail=error)
+        raise HTTPException(status_code=500, detail=f"{error}")
     

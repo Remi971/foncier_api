@@ -2,9 +2,9 @@ from sqlalchemy import Column, String, Integer, TIMESTAMP, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.postgresql import UUID
 from dto.users import Roles
-Base = declarative_base()
 import uuid
 
+Base = declarative_base()
 class User(Base):
     __tablename__= 'users'
     id = Column(UUID(as_uuid=True), primary_key=True, nullable=False, unique=True, default=uuid.uuid4)
@@ -15,3 +15,4 @@ class User(Base):
     role = Column(String, nullable=False, default=Roles.BASIC.value)
     createdAt = Column(TIMESTAMP(timezone=True), nullable=False, default=text('Now()'))
     updatedAt = Column(TIMESTAMP(timezone=True), nullable=False, default=text('Now()'), server_onupdate=text('Now()'))
+    

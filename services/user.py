@@ -51,6 +51,13 @@ def get_user(id: str, db: Session):
     except DataError:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"invalid input syntax for type uuid: {id}")
         
+def get_all_users(db: Session):
+    try:
+        users = db.query(user_model).all()   
+        return users
+    except Exception as error:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")   
+
 def get_user_by_email(db, email: str):
     user = db.query(user_model).get({"email": email})
     if not user:
@@ -79,4 +86,4 @@ def delete_user(id: str, db):
         db.commit()
         return "User deleted"
     except Exception as error:
-        raise HTTPException(status_code=500, detail=error) 
+        raise HTTPException(status_code=500, detail=f"{error}") 

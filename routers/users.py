@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Body, Path, Depends, HTTPException
 from sqlalchemy.orm import Session
 from schema.users import Users, User_update
-from services.user import create_user, update_user, delete_user, get_user, get_current_user
+from services.user import create_user, update_user, delete_user, get_user, get_current_user, get_all_users
 from dependencies import get_pg_db
 router = APIRouter(
     prefix="/users"
 )
+
+@router.get("/")
+def get_all(db: Session = Depends(get_pg_db)):
+    return get_all_users(db)
 
 @router.post("/")
 def create(body: Users = Body, db: Session = Depends(get_pg_db)):

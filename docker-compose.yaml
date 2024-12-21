@@ -1,9 +1,39 @@
 services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: Gwada971
+      POSTGRES_USER: postgres
+      POSTGRES_DB: foncier
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"  # Correction du mapping du port : local:5434 vers container:5432
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "foncier", "-U", "postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
   app:
     build: .
-    container_name: foncer-api
-    command: uvicorn main:app --host 0.0.0.0 --port 80 --reload
+    environment:
+      TOKEN_ALGORITHM: HS256
+      TOKEN_SECRET: ceef2786ae5f2009f4d8f99b4056cf56a7d4d3eb2350e6606741501242bd0b3e
+      ACCESS_TOKEN_EXPIRE_MINUTES: 5
+      DATABASE_URL_SQLITE: sqlite:///db.sqlite
+      DATABASE_URL_POSTGRES: postgresql://postgres:Gwada971@db:5432/foncier
+    container_name: foncier-api
+    command: "uvicorn main:app --host 0.0.0.0 --port 80 --reload"
     ports: 
-      - 8080:80
+      - "8080:80"
     volumes:
       - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
