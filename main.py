@@ -1,11 +1,16 @@
-from fastapi import FastAPI, Path, Query, Depends
+from fastapi import FastAPI, Path, Query, Depends, HTTPException, status
 from contextlib import asynccontextmanager
-from dependencies import oauth2_scheme, engine_pgsql
-from routers import data
-from routers import process
-from routers import users
-from routers import auth
+from dependencies import oauth2_scheme, engine_pgsql, get_pg_db, settings
+from routers import data, process, users
 from models.users import Base
+from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
+from schema.auth import Token
+from schema.users import Users_create
+from services.user import authenticate_user, create_user
+from services.auth import create_access_token, credentials
+from datetime import timedelta
+from pydantic import EmailStr
 
 @asynccontextmanager
 async def init_db(app: FastAPI):
@@ -14,40 +19,51 @@ async def init_db(app: FastAPI):
     yield
 
 app = FastAPI(
-    title="Demo of testing FastApi",
-    description="Exploration of fastapi framework and test of good practice",
+    title="CartoFoncier",
+    description="CartoFoncier API",
     version="0.0.1",
     lifespan=init_db
     )
 
-app.include_router(auth.router)
 app.include_router(data.router)
 app.include_router(process.router)
 app.include_router(users.router)
 
-@app.get('/')
-def read_root(token: str = Depends(oauth2_scheme)):
-    '''Basic Get request'''
-    return f"Hello world ... : {token}"
+@app.post('/token',  tags=['authentication'], summary="Login")
+def login(form_login : OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_pg_db)) -> Token:
+    print("### login ###")
+    user = authenticate_user(db, form_login.username, form_login.password)
+    print("user", user)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    token = create_access_token(
+        data={"sub": user.email, "id": str(user.id) }, expires_delta=access_token_expires
+    )
+    return Token(access_token=token["access_token"], refresh_token=token["refresh_token"], token_type="bearer")
 
-@app.get(
-    "/onlyparams",
-    responses={
-        404: {"description": "Not Found"},
-        400: {"description": "No arguments specified"}
-    })
-def read_params(
-    param1: int = Query(default=None, gt=0), 
-    param2: str| None = Query(default=None, min_length=1),
-    ):
-    return {"param1": param1, "param2": param2}
+@app.post('/signin', tags=['authentication'], summary="Sign in")
+def signin(body: Users_create = Depends(), db: Session = Depends(get_pg_db)) -> Token:
+    user = create_user(body, db)
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    token = create_access_token(
+        data={"sub": user.email, "id": str(user.id)}, expires_delta=access_token_expires
+    )
+    return Token(access_token=token["access_token"], refresh_token=token["refresh_token"], token_type="bearer")
 
-@app.get("/items/{item_id}")
-def read_items(
-    item_id: int | None = Path(gt=0),
-    ):
-    return {"item_id": item_id}
-
-@app.get("/items")
-def test():
-    return "Test"
+@app.post('/refresh_token', tags=['authentication'], summary="Refresh Token")
+def refresh_token(refresh_token : str = Depends(oauth2_scheme)):
+    token = credentials(refresh_token)
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    token = create_access_token(
+        data={"sub": token.email, "id": str(token.id)}, expires_delta=access_token_expires
+    )
+    return Token(access_token=token["access_token"], refresh_token=token["refresh_token"], token_type="bearer")
+    
+@app.post('/reset_password',  tags=['authentication'], summary="Reset password")
+def reset_password(email: EmailStr):
+    ...

@@ -18,13 +18,15 @@ def decode_token(token):
     
 def verify_password(plain_password: str, hash_password: str):
     password_byte_enc = plain_password.encode('utf-8')
-    return bcrypt.checkpw(password = password_byte_enc , hashed_password = hash_password)
+    hash_password_byte_enc = hash_password.encode('utf-8')
+    return bcrypt.checkpw(password = password_byte_enc , hashed_password = hash_password_byte_enc)
 
 def get_password_hash(password):
     pwd_bytes = password.encode('utf-8')
     salt = bcrypt.gensalt()
     hashed_password = bcrypt.hashpw(password=pwd_bytes, salt=salt)
-    return hashed_password
+    string_password = hashed_password.decode('utf8')
+    return string_password
 
 def credentials(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
@@ -35,11 +37,14 @@ def credentials(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, settings.TOKEN_SECRET, algorithms=[settings.TOKEN_ALGORITHM])
         email: str = payload.get("sub")
+        id: str = payload.get("id")
         if email is None:
+            print("email error")
             raise credentials_exception
-        token_data = TokenData(email=email)
+        token_data = TokenData(email=email, id=id)
         return token_data
-    except InvalidTokenError:
+    except InvalidTokenError as e:
+        print(f"InvalidTokenError : {e}")
         raise credentials_exception
 
 
@@ -48,7 +53,12 @@ def create_access_token(data: None, expires_delta: timedelta | None = None):
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=5)
+    refresh_expire = datetime.now(timezone.utc) + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, settings.TOKEN_SECRET, algorithm=settings.TOKEN_ALGORITHM)
-    return encoded_jwt
+    access_token = jwt.encode(to_encode, settings.TOKEN_SECRET, algorithm=settings.TOKEN_ALGORITHM)
+    
+    refresh_to_encode =data.copy()
+    refresh_to_encode.update({"exp": refresh_expire})
+    refresh_token = jwt.encode(refresh_to_encode, settings.TOKEN_SECRET, algorithm=settings.TOKEN_ALGORITHM)
+    return {"access_token": access_token, "refresh_token": refresh_token}

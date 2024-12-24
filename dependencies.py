@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     TOKEN_ALGORITHM: str
     TOKEN_SECRET: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
+    REFRESH_TOKEN_EXPIRE_MINUTES: int
     
         
 settings = Settings()

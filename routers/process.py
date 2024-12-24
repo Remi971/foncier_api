@@ -13,25 +13,25 @@ router = APIRouter(
 
 #TODO : user send inputs (enveloppe layer, or params for creating enveloppe layer) AND potentiel params
 
-@router.post('/enveloppe')
+@router.post('/enveloppe', tags=["Processing"], summary="Register Envelop operation")
 def register_process_enveloppe(body: EnveloppeParamsDto = Body):
     '''Register Processing enveloppe creation to PostGreSQL database from the user And lunch the process'''
     register_enveloppe()
     
-@router.post('/potentiel')
+@router.post('/potentiel', tags=["Processing"], summary="Register Potentiel Operation")
 def register_process_potentiel(body: PotentielParamsDto = Body):
     '''Register Processing potentiel calcul and lunch the process'''
     register_potentiel()
     
-@router.get('enveloppe/create/:id')
+@router.get('enveloppe/create/:id', tags=["Processing"], summary="Launch Envelop calculation")
 def envelop_creation(id):
     envelop_creation(id)
     
-@router.get('potentiel/calcul/:id')
+@router.get('potentiel/calcul/:id', tags=["Processing"], summary="Launch Potentiel Calculation")
 def potentiel_calcul(id):
     potentiel_calcul(id)
 
-@router.post('/enveloppe')
+@router.post('/enveloppe', tags=["Processing"])
 def processing(
     body: EnveloppeParamsDto = Body,
     engine: Session = Depends(get_engine),

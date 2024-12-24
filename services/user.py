@@ -26,18 +26,18 @@ def create_user(body: Users_create, db: Session):
     except Exception as error:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")
     
-def authenticate_user(db, username: str, password: str):
+def authenticate_user(db, username: str, password: str) -> Users:
     user = get_user_by_email(db, username)
+    print("authenticate_user", user)
     if not user:
         return False
     if not verify_password(password, user.hashed_password):
         return False
     return user
 
-async def get_current_user(db, token: str = Depends(oauth2_scheme)):
-    token_data = credentials(token)
+def get_current_user(db, email) -> Users:
     try:
-        user = get_user_by_email(db, email=token_data.email)
+        user = get_user_by_email(db, email=email)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user
@@ -58,13 +58,13 @@ def get_all_users(db: Session):
     except Exception as error:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")   
 
-def get_user_by_email(db, email: str):
-    user = db.query(user_model).get({"email": email})
+def get_user_by_email(db, email: str) -> Users:
+    print("email", email) 
+    user = db.query(user_model).filter(user_model.email == email).all()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     try:
-        user_dict = user.model_dump()
-        return Users(**user_dict)
+        return user[0]
     except Exception as error:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")
 
