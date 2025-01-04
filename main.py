@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Path, Query, Depends, HTTPException, status
+from fastapi import FastAPI, Path, Body, Query, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from dependencies import oauth2_scheme, engine_pgsql, get_pg_db, settings
 from routers import data, process, users
@@ -17,6 +18,10 @@ async def init_db(app: FastAPI):
     print("##### init_db #####")
     Base.metadata.create_all(bind=engine_pgsql)
     yield
+    
+origins = [
+    settings.BASE_URL
+]
 
 app = FastAPI(
     title="CartoFoncier",
@@ -24,16 +29,21 @@ app = FastAPI(
     version="0.0.1",
     lifespan=init_db
     )
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=['*'],
+    allow_headers=['*']
+    
+)
 app.include_router(data.router)
 app.include_router(process.router)
 app.include_router(users.router)
 
 @app.post('/token',  tags=['authentication'], summary="Login")
 def login(form_login : OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_pg_db)) -> Token:
-    print("### login ###")
     user = authenticate_user(db, form_login.username, form_login.password)
-    print("user", user)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -47,7 +57,7 @@ def login(form_login : OAuth2PasswordRequestForm = Depends(), db: Session = Depe
     return Token(access_token=token["access_token"], refresh_token=token["refresh_token"], token_type="bearer")
 
 @app.post('/signin', tags=['authentication'], summary="Sign in")
-def signin(body: Users_create = Depends(), db: Session = Depends(get_pg_db)) -> Token:
+def signin(body: Users_create = Body, db: Session = Depends(get_pg_db)) -> Token:
     user = create_user(body, db)
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     token = create_access_token(
