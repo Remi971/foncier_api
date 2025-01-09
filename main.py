@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Path, Body, Query, Depends, HTTPException, status
+from fastapi import FastAPI, Path, Body, Query, Depends, HTTPException, status, WebSocket, WebSocketException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from dependencies import oauth2_scheme, engine_pgsql, get_pg_db, settings
 from routers import data, process, users
-from models.users import Base
+from models.users import Base as BaseUsers
+from models.notification import Base as BaseNotifications
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from schema.auth import Token
@@ -12,11 +13,16 @@ from services.user import authenticate_user, create_user
 from services.auth import create_access_token, credentials
 from datetime import timedelta
 from pydantic import EmailStr
+#TEST
+from schema.notifications import Notifications, NotificationsMessage
+from services.notifications import Notifiyer, get_last_notif
+from dto.notifications import NotificationsState, NotificationsStatusEnum, NotificationsTypeEnum
 
 @asynccontextmanager
 async def init_db(app: FastAPI):
     print("##### init_db #####")
-    Base.metadata.create_all(bind=engine_pgsql)
+    BaseUsers.metadata.create_all(bind=engine_pgsql)
+    BaseNotifications.metadata.create_all(bind=engine_pgsql)
     yield
     
 origins = [
@@ -77,3 +83,72 @@ def refresh_token(refresh_token : str = Depends(oauth2_scheme)):
 @app.post('/reset_password',  tags=['authentication'], summary="Reset password")
 def reset_password(email: EmailStr):
     ...
+    
+#TODO : protect the websocket endpoints
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Depends(get_pg_db)):
+    token_data = credentials(token)
+    await websocket.accept()
+    while True:
+        try:
+            #TODO: function that check the state of last notifications - après 5min si status pending update en error
+            data = await websocket.receive_text()
+            print(data)
+            # last_notif = get_last_notif(db)
+            # print("Last Notif", last_notif)
+            await websocket.send_json({"id": "id", "message": "blabla", "recipient": token_data.id, "type": "test", "status": "success"})
+        except Exception as error:
+            print("websocket error", error)
+            raise WebSocketException(code=status.WS_1011_INTERNAL_ERROR, reason="Websocket Error")
+        
+@app.websocket("/ws/processing")
+async def processing(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_text()
+        #TODO : check dans la base de donnée si process en cours
+        check = True
+        if check:
+            await websocket.send_text("Process en cours")
+        else:
+            await websocket.sen_text("Process terminé")
+        
+@app.post('/test_notification', tags=['TEST'])
+def notifyerTest(
+    token : str = Depends(oauth2_scheme),
+    db: Session = Depends(get_pg_db)
+):
+    try:
+        token_data = credentials(token)
+        notif: Notifications = {
+            "message": "notification Test",
+            "recipient": token_data.id,
+            "status": NotificationsStatusEnum.PENDING,
+            "type": NotificationsTypeEnum.DATA
+        }
+        notify = Notifiyer(db=db, state=NotificationsState.CREATION, notif=notif, id=None )
+        notifId = notify.action()
+        updateNotif: Notifications = {
+            "message": "update Notification Test",
+            "recipient":  token_data.id,
+            "status": NotificationsStatusEnum.SUCCESS,
+            "type": NotificationsTypeEnum.DATA
+        }
+        
+        updateNotify = Notifiyer(db=db, state=NotificationsState.UPDATE, notif=updateNotif, id=notifId )
+        return updateNotify.action()
+        
+    except Exception as error:
+        raise error
+    
+@app.delete("/notif/{id}", tags=["TEST"])
+def deleteNotif(
+    id: str = Path,
+    db: Session = Depends(get_pg_db),
+    token: str = Depends(oauth2_scheme), 
+):
+    token_data = credentials(token)
+    notif = Notifiyer(state=NotificationsState.DELETE, db=db, notif=None, id=id)
+    delete = notif.action()
+    return delete
+    

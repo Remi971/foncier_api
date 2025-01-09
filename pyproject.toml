@@ -26,6 +26,7 @@ python-dotenv = "^1.0.1"
 python-multipart = "^0.0.20"
 pydantic-settings = "^2.7.0"
 alembic = "^1.14.0"
+websockets = "^14.1"
 
 
 [build-system]

@@ -24,11 +24,11 @@ def register_process_potentiel(body: PotentielParamsDto = Body):
     register_potentiel()
     
 @router.get('enveloppe/create/:id', tags=["Processing"], summary="Launch Envelop calculation")
-def envelop_creation(id):
+def envelop_creation_launch(id):
     envelop_creation(id)
     
 @router.get('potentiel/calcul/:id', tags=["Processing"], summary="Launch Potentiel Calculation")
-def potentiel_calcul(id):
+def potentiel_calcul_launch(id):
     potentiel_calcul(id)
 
 @router.post('/enveloppe', tags=["Processing"])

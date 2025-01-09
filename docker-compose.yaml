@@ -26,7 +26,7 @@ services:
       DATABASE_URL_SQLITE: sqlite:///db.sqlite
       DATABASE_URL_POSTGRES: postgresql://postgres:Gwada971@db:5432/foncier
     container_name: foncier-api
-    command: "uvicorn main:app --host 0.0.0.0 --port 80 --reload"
+    command: "uvicorn main:app --host 0.0.0.0 --port 80 --reload --ws=websockets"
     ports: 
       - "8080:80"
     volumes:

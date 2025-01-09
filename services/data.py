@@ -7,6 +7,10 @@ from fastapi import HTTPException
 import tarfile
 from shutil import rmtree
 from script.pyogr.ogr2ogr import main as ogr2ogr
+from services.notifications import Notifiyer
+from sqlalchemy.orm import Session
+from dto.notifications import NotificationsState, NotificationsStatusEnum, NotificationsTypeEnum
+from schema.notifications import Notifications
 
 def multi_to_single_polygon(gdf:gpd.GeoDataFrame):
     gdf_singlepoly: gpd.GeoSeries = gdf[gdf.geometry.type == 'Polygon']
@@ -20,9 +24,11 @@ def multi_to_single_polygon(gdf:gpd.GeoDataFrame):
     gdf_singlepoly.reset_index(inplace=True, drop=True)
     return gdf_singlepoly
 
-def get_data(insee: str):
+def get_data(insee: str, notifId: str, db: Session):
     data_url = f"https://cadastre.data.gouv.fr/bundler/pci-vecteur/communes/{insee}/edigeo"
     try:
+        if os.path.isfile("tmp/db.sqlite"):
+            os.remove("tmp/db.sqlite")
         response = requests.get(data_url)
         response.raise_for_status()
         tmp_data = os.path.abspath(f'tmp/{insee}.zip')
@@ -49,11 +55,23 @@ def get_data(insee: str):
             filenames_fullpath = list(map(lambda file: os.path.join(dirpath, file), filenames))
             thfList = list(filter(lambda file: file.endswith('.THF'), filenames_fullpath))
         importEdigeoTHF(thfList)
-        for file in os.listdir('tmp'):
-            rmtree('tmp/unzip')
+        # for file in os.listdir('tmp'):
+        #     rmtree('tmp/unzip')
+        newNotif : Notifications = {
+            "message": "Acquisition des données terminée",
+            "status": NotificationsStatusEnum.SUCCESS,
+            "type": NotificationsTypeEnum.DATA
+        }
+        notification = Notifiyer(state=NotificationsState.UPDATE, db=db, notif=newNotif, id=notifId )
     except Exception as error:
+        newNotif.status = NotificationsStatusEnum.ERROR
+        newNotif.message = "L'acquisition des données a échoué"
+        errorNotification = Notifiyer(state=NotificationsState.UPDATE, db=db, notif=newNotif, id=notifId)
+        errorNotification.action()
         raise HTTPException(status_code=500, detail=f"Error : {error}")
-    return "Data downloaded and stored in database successfully !"
+    id = notification.action()
+    print("Acquisition des données terminée ! ")
+    return {"message": "Data downloaded and stored in database successfully !", "data": {"id": id}}
         
 def importEdigeoTHF(thf_list):
     for thf in thf_list:
