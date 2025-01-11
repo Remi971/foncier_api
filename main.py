@@ -93,13 +93,18 @@ async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Dep
         try:
             #TODO: function that check the state of last notifications - après 5min si status pending update en error
             data = await websocket.receive_text()
-            print(data)
-            # last_notif = get_last_notif(db)
-            # print("Last Notif", last_notif)
-            await websocket.send_json({"id": "id", "message": "blabla", "recipient": token_data.id, "type": "test", "status": "success"})
+            last_notif = get_last_notif(db)
+            await websocket.send_json({
+                "id": str(last_notif.id), 
+                "message": last_notif.message, 
+                "status": last_notif.status,
+                "type": last_notif.type,
+                "recipient": last_notif.recipient})
         except Exception as error:
-            print("websocket error", error)
-            raise WebSocketException(code=status.WS_1011_INTERNAL_ERROR, reason="Websocket Error")
+            print(f"Webscoket Error : {error}")
+            break
+        
+        
         
 @app.websocket("/ws/processing")
 async def processing(websocket: WebSocket):
@@ -152,3 +157,8 @@ def deleteNotif(
     delete = notif.action()
     return delete
     
+@app.get("/notif", tags=['TEST'])
+def getLastNotif(
+    db: Session = Depends(get_pg_db)
+):
+    return get_last_notif(db)

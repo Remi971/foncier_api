@@ -59,9 +59,6 @@ class Notifiyer:
             
 def get_last_notif(db:Session):
     try:
-        notification = db.query(notif_model).order_by(notif_model.updatedAt.desc()).first()
-        for notif in notification:
-            print(notif)
-        return notification
+        return db.query(notif_model).order_by(notif_model.updatedAt.desc()).first()
     except Exception as error:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")
