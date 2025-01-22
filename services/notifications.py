@@ -1,8 +1,9 @@
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends
 from schema.notifications import Notifications
 from sqlalchemy.orm import Session
 from models.notification import Notification as notif_model
 from dto.notifications import NotificationsState
+from dependencies import get_pg_db
 
 class Notifiyer:
     def __init__(self, state: NotificationsState, db: Session, notif: Notifications | None, id: str | None):
@@ -57,8 +58,8 @@ class Notifiyer:
                 print("State unknown ! ")
                 return {"message": "FAILED ! "}
             
-def get_last_notif(db:Session):
+def get_last_notif(db:Session, id: str):
     try:
-        return db.query(notif_model).order_by(notif_model.updatedAt.desc()).first()
+        return db.query(notif_model).filter_by(recipient=id).order_by(notif_model.updatedAt.desc()).first()
     except Exception as error:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")

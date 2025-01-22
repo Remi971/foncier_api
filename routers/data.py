@@ -1,20 +1,17 @@
 from fastapi import APIRouter, Path, Depends, BackgroundTasks, status, HTTPException
-from services.data import get_data
+from services.data import get_data, check_data
 from services.auth import credentials
 from services.notifications import Notifiyer
 from dependencies import oauth2_scheme
 from schema.notifications import NotificationsModel
 from dto.notifications import NotificationsStatusEnum, NotificationsTypeEnum, NotificationsState
 from sqlalchemy.orm import Session
-from dependencies import get_pg_db
+from dependencies import get_pg_db, get_db
 
 router = APIRouter(
     prefix="/data"
 )
 
-@router.get('/', tags=["Data"])
-def list_code_insee():
-    ...
     
 @router.get('/add/sqlite/{insee}', tags=["Data"], summary="Get The PCI-Vector Data", status_code=status.HTTP_202_ACCEPTED)
 def adding_data_to_db(
@@ -39,4 +36,10 @@ def adding_data_to_db(
     except Exception as error:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f'{error}')
     
-    
+@router.get('/', tags=["Data"])
+def checkData(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+):
+    token_data = credentials(token)
+    return check_data(db)

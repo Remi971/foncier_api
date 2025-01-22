@@ -8,6 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file='.env.development', env_file_encoding='utf-8')
     DATABASE_URL_SQLITE: str
+    DATABASE_URL_SUPABASE: str
     DATABASE_URL_POSTGRES: str
     TOKEN_ALGORITHM: str
     TOKEN_SECRET: str
@@ -20,6 +21,9 @@ settings = Settings()
 engine = create_engine(settings.DATABASE_URL_SQLITE)
 listen(engine, "connect", load_spatialite)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+engine_supabase = create_engine(settings.DATABASE_URL_SUPABASE)
+SessionLocalSupabase = sessionmaker(autocommit=False, autoflush=False, bind=engine_supabase)
 
 engine_pgsql = create_engine(settings.DATABASE_URL_POSTGRES)
 SessionLocalPgsql = sessionmaker(autocommit=False, autoflush=False, bind=engine_pgsql)
@@ -39,6 +43,13 @@ def get_engine():
 def get_pg_db():
     database = SessionLocalPgsql()
     try:
+        yield database
+    finally:
+        database.close()
+        
+def get_supa_db():
+    database = SessionLocalSupabase()
+    try: 
         yield database
     finally:
         database.close()

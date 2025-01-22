@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Path, Body, Query, Depends, HTTPException, status, WebSocket, WebSocketException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from dependencies import oauth2_scheme, engine_pgsql, get_pg_db, settings
-from routers import data, process, users
+from dependencies import oauth2_scheme, engine_pgsql, engine_supabase, get_pg_db, get_supa_db, settings
+from routers import data, process, users, notifications
 from models.users import Base as BaseUsers
 from models.notification import Base as BaseNotifications
 from fastapi.security import OAuth2PasswordRequestForm
@@ -21,7 +21,7 @@ from dto.notifications import NotificationsState, NotificationsStatusEnum, Notif
 @asynccontextmanager
 async def init_db(app: FastAPI):
     print("##### init_db #####")
-    BaseUsers.metadata.create_all(bind=engine_pgsql)
+    BaseUsers.metadata.create_all(bind=engine_supabase)
     BaseNotifications.metadata.create_all(bind=engine_pgsql)
     yield
     
@@ -46,9 +46,10 @@ app.add_middleware(
 app.include_router(data.router)
 app.include_router(process.router)
 app.include_router(users.router)
+app.include_router(notifications.router)
 
 @app.post('/token',  tags=['authentication'], summary="Login")
-def login(form_login : OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_pg_db)) -> Token:
+def login(form_login : OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_supa_db)) -> Token:
     user = authenticate_user(db, form_login.username, form_login.password)
     if not user:
         raise HTTPException(
@@ -63,7 +64,7 @@ def login(form_login : OAuth2PasswordRequestForm = Depends(), db: Session = Depe
     return Token(access_token=token["access_token"], refresh_token=token["refresh_token"], token_type="bearer")
 
 @app.post('/signin', tags=['authentication'], summary="Sign in")
-def signin(body: Users_create = Body, db: Session = Depends(get_pg_db)) -> Token:
+def signin(body: Users_create = Body, db: Session = Depends(get_supa_db)) -> Token:
     user = create_user(body, db)
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     token = create_access_token(
@@ -93,58 +94,16 @@ async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Dep
         try:
             #TODO: function that check the state of last notifications - après 5min si status pending update en error
             data = await websocket.receive_text()
-            last_notif = get_last_notif(db)
-            await websocket.send_json({
-                "id": str(last_notif.id), 
-                "message": last_notif.message, 
-                "status": last_notif.status,
-                "type": last_notif.type,
-                "recipient": last_notif.recipient})
+            # last_notif = get_last_notif()
+            # await websocket.send_json({
+            #     "id": str(last_notif.id), 
+            #     "message": last_notif.message, 
+            #     "status": last_notif.status,
+            #     "type": last_notif.type,
+            #     "recipient": last_notif.recipient})
         except Exception as error:
             print(f"Webscoket Error : {error}")
             break
-        
-        
-        
-@app.websocket("/ws/processing")
-async def processing(websocket: WebSocket):
-    await websocket.accept()
-    while True:
-        data = await websocket.receive_text()
-        #TODO : check dans la base de donnée si process en cours
-        check = True
-        if check:
-            await websocket.send_text("Process en cours")
-        else:
-            await websocket.sen_text("Process terminé")
-        
-@app.post('/test_notification', tags=['TEST'])
-def notifyerTest(
-    token : str = Depends(oauth2_scheme),
-    db: Session = Depends(get_pg_db)
-):
-    try:
-        token_data = credentials(token)
-        notif: Notifications = {
-            "message": "notification Test",
-            "recipient": token_data.id,
-            "status": NotificationsStatusEnum.PENDING,
-            "type": NotificationsTypeEnum.DATA
-        }
-        notify = Notifiyer(db=db, state=NotificationsState.CREATION, notif=notif, id=None )
-        notifId = notify.action()
-        updateNotif: Notifications = {
-            "message": "update Notification Test",
-            "recipient":  token_data.id,
-            "status": NotificationsStatusEnum.SUCCESS,
-            "type": NotificationsTypeEnum.DATA
-        }
-        
-        updateNotify = Notifiyer(db=db, state=NotificationsState.UPDATE, notif=updateNotif, id=notifId )
-        return updateNotify.action()
-        
-    except Exception as error:
-        raise error
     
 @app.delete("/notif/{id}", tags=["TEST"])
 def deleteNotif(

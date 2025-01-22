@@ -11,6 +11,8 @@ services:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5434:5432"  # Correction du mapping du port : local:5434 vers container:5432
+    networks:
+      - ipv6_network
     healthcheck:
       test: ["CMD", "pg_isready", "-d", "foncier", "-U", "postgres"]
       interval: 2s
@@ -26,7 +28,9 @@ services:
       DATABASE_URL_SQLITE: sqlite:///db.sqlite
       DATABASE_URL_POSTGRES: postgresql://postgres:Gwada971@db:5432/foncier
     container_name: foncier-api
-    command: "uvicorn main:app --host 0.0.0.0 --port 80 --reload --ws=websockets"
+    command: "uvicorn main:app --host 0.0.0.0 --port 80 --reload"
+    networks:
+      - ipv6_network
     ports: 
       - "8080:80"
     volumes:
@@ -37,3 +41,11 @@ services:
 
 volumes:
   pgdata:
+networks:
+  ipv6_network:
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      driver: default
+      config:
+        - subnet: "fd00:abcd:1234::/64"

@@ -3,7 +3,7 @@ import pandas as pd
 import requests
 from zipfile import ZipFile
 import os
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 import tarfile
 from shutil import rmtree
 from script.pyogr.ogr2ogr import main as ogr2ogr
@@ -11,6 +11,8 @@ from services.notifications import Notifiyer
 from sqlalchemy.orm import Session
 from dto.notifications import NotificationsState, NotificationsStatusEnum, NotificationsTypeEnum
 from schema.notifications import Notifications
+from models.data import Commune as commune_model
+from sqlite3 import OperationalError
 
 def multi_to_single_polygon(gdf:gpd.GeoDataFrame):
     gdf_singlepoly: gpd.GeoSeries = gdf[gdf.geometry.type == 'Polygon']
@@ -56,7 +58,7 @@ def get_data(insee: str, notifId: str, db: Session):
             thfList = list(filter(lambda file: file.endswith('.THF'), filenames_fullpath))
         importEdigeoTHF(thfList)
         # for file in os.listdir('tmp'):
-        #     rmtree('tmp/unzip')
+        rmtree('tmp/unzip')
         newNotif : Notifications = {
             "message": "Acquisition des données terminée",
             "status": NotificationsStatusEnum.SUCCESS,
@@ -94,4 +96,14 @@ def importEdigeoTHF(thf_list):
             ]
         ogr2ogr(cmdArgs)
         
-    
+def check_data(db:Session) :
+    try:
+        commune = db.query(commune_model).all()
+        print("commune", commune)
+        db.commit()
+        return commune
+    except Exception as error:
+        if "no such table" in f"{error}":
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{error}")
+        else:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")

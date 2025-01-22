@@ -1,6 +1,6 @@
 FROM python:3.12
 
-RUN apt-get update && apt-get install -y gdal-bin libgdal-dev libsqlite3-mod-spatialite
+RUN apt-get update && apt-get install -y iputils-ping gdal-bin libgdal-dev libsqlite3-mod-spatialite
 
 # Install Poetry
 RUN pip install --no-cache-dir poetry
