@@ -1,23 +1,19 @@
 from pydantic import BaseModel
 
 class PotentielParamsDto(BaseModel):
-    minSurfParNue: int # Surface minimale de la parcelle non bâtie
-    minSurfParBatie: int # Surface minimale de la parcelle bâtie
-    maxCes: int # CES maximum de la parcelle bâtie
-    minSurfDivision: int # Surface minimale du résultat de la division parcellaire
-    distBufferTest: int # Distance du buffer pour le test
-    distBufferBati: int # Distance du buffer autour du bâti
-    createdAt: str
-    updatedAt: str
+    minSurfParNue: int = 400 # Surface minimale de la parcelle non bâtie
+    minSurfParBatie: int = 1000 # Surface minimale de la parcelle bâtie
+    maxCes: int = 50 # CES maximum de la parcelle bâtie
+    minSurfDivision: int = 400 # Surface minimale du résultat de la division parcellaire
+    distBufferTest: int = 10 # Distance du buffer pour le test
+    distBufferBati: int = 8 # Distance du buffer autour du bâti
     
 class EnveloppeParamsDto(BaseModel):
-    minSurfBati: int # Surface minimale du Bâti
-    bufferBati: int # Buffer autour du bâti
-    dilatation: int # Distance Buffer pour la dilatation
-    erosion: int # Distance Buffer pour l'érosion
-    minPartInBuffer: int # Part minimale de la parcelle comprise dans le buffer dilation-erosion
-    maxSurfTrou: int # Surface maximale des trous à combler
-    minSurfEnv: int # Surface minimale des enveloppes
-    maxSurfResidus: int # Surface maximale des résidus à supprimer
-    cretedAt: str
-    updatedAt: str
+    minSurfBati: int = 30 # Surface minimale du Bâti
+    bufferBati: int = 4 # Buffer autour du bâti
+    dilatation: int = 50 # Distance Buffer pour la dilatation
+    erosion: int = -30 # Distance Buffer pour l'érosion
+    minPartInBuffer: int = 50 # Part minimale de la parcelle comprise dans le buffer dilation-erosion
+    maxSurfTrou: int = 2000 # Surface maximale des trous à combler
+    minSurfEnv: int = 10000 # Surface minimale des enveloppes
+    maxSurfResidus: int = 5 # Surface maximale des résidus à supprimer

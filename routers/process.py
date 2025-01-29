@@ -1,45 +1,55 @@
-from fastapi import APIRouter, HTTPException, Body, Depends
+from fastapi import APIRouter, HTTPException, Body, Depends, BackgroundTasks, status
 from dto.process import  PotentielParamsDto
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import text
-from dependencies import get_db, get_engine
+from dependencies import get_db, get_engine, get_pg_db, oauth2_scheme
 import geopandas as gpd
 import pandas as pd
-from services.process import envelop_creation, register_enveloppe, register_potentiel, potentiel_calcul
+from services.process import envelop_creation, potentiel_calcul
 from dto.process import EnveloppeParamsDto
+from schema.notifications import Notifications
+from dto.notifications import NotificationsStatusEnum, NotificationsTypeEnum, NotificationsState
+from services.notifications import Notifiyer
+from services.auth import credentials
+
 router = APIRouter(
     prefix="/process"
 )
 
 #TODO : user send inputs (enveloppe layer, or params for creating enveloppe layer) AND potentiel params
-
-@router.post('/enveloppe', tags=["Processing"], summary="Register Envelop operation")
-def register_process_enveloppe(body: EnveloppeParamsDto = Body):
-    '''Register Processing enveloppe creation to PostGreSQL database from the user And lunch the process'''
-    register_enveloppe()
     
 @router.post('/potentiel', tags=["Processing"], summary="Register Potentiel Operation")
-def register_process_potentiel(body: PotentielParamsDto = Body):
-    '''Register Processing potentiel calcul and lunch the process'''
-    register_potentiel()
+def process_potentiel(
+    background_tasks: BackgroundTasks,
+    token: str = Depends(oauth2_scheme),
+    body: PotentielParamsDto = Body,
+    db: Session = Depends(get_pg_db)
+    ):
+    try:
+        token_data = credentials(token)
+        newNotif : Notifications = {
+                "message": "Acquisition des données terminée",
+                "status": NotificationsStatusEnum.PENDING,
+                "type": NotificationsTypeEnum.POTENTIEL,
+                "recipient": token_data.id
+            }
+        notificationId = Notifiyer(state=NotificationsState.CREATION, db=db, notif=newNotif )
+        background_tasks.add_task(potentiel_calcul, body, db, notificationId)
+    except Exception as error:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, details=f"{error}")
     
-@router.get('enveloppe/create/:id', tags=["Processing"], summary="Launch Envelop calculation")
-def envelop_creation_launch(id):
-    envelop_creation(id)
     
-@router.get('potentiel/calcul/:id', tags=["Processing"], summary="Launch Potentiel Calculation")
-def potentiel_calcul_launch(id):
-    potentiel_calcul(id)
-
 @router.post('/enveloppe', tags=["Processing"])
-def processing(
+def process_envelop(
+    background_tasks: BackgroundTasks,
+    token: str = Depends(oauth2_scheme),
     body: EnveloppeParamsDto = Body,
-    engine: Session = Depends(get_engine),
     db: Session = Depends(get_db)
 ):
     try:
-        envelop_creation(body)
-        return "Enveloppe created successfully"
+        # token_data = credentials(token)
+        background_tasks.add_task(envelop_creation, body, db)
+        return "Creating Enveloppe"
     except Exception as error:
         raise HTTPException(status_code=500, detail=f"{error}")
     

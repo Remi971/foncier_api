@@ -1,10 +1,11 @@
 from fastapi import FastAPI, Path, Body, Query, Depends, HTTPException, status, WebSocket, WebSocketException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from dependencies import oauth2_scheme, engine_pgsql, engine_supabase, get_pg_db, get_supa_db, settings
+from dependencies import oauth2_scheme, engine_pgsql, engine_supabase, engine, get_pg_db, get_supa_db, settings
 from routers import data, process, users, notifications
 from models.users import Base as BaseUsers
 from models.notification import Base as BaseNotifications
+from models.data import Base as BaseData
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from schema.auth import Token
@@ -23,6 +24,7 @@ async def init_db(app: FastAPI):
     print("##### init_db #####")
     BaseUsers.metadata.create_all(bind=engine_supabase)
     BaseNotifications.metadata.create_all(bind=engine_pgsql)
+    BaseData.metadata.create_all(bind=engine)
     yield
     
 origins = [

@@ -11,5 +11,4 @@ router = APIRouter(
 @router.get("/last", tags=["Notifications"])
 def get_last_notification(db: Session = Depends(get_pg_db), token: str = Depends(oauth2_scheme)):
     tokens = credentials(token)
-    print("tokens", tokens.id)
     return get_last_notif(db, tokens.id)
