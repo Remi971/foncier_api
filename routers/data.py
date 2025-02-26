@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Path, Depends, BackgroundTasks, status, HTTPException, Body
-from services.data import get_data, check_data, clean_data
+from fastapi import APIRouter, Depends, BackgroundTasks, status, HTTPException, Body
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
+from services.data import get_data, check_data_commune, check_data_enveloppe, check_data_potentiel, clean_data, download_potentiel_layer
 from services.auth import credentials
 from services.notifications import Notifiyer
 from dependencies import oauth2_scheme
@@ -8,8 +10,6 @@ from schema.data import CommuneDto
 from dto.notifications import NotificationsStatusEnum, NotificationsTypeEnum, NotificationsState
 from sqlalchemy.orm import Session
 from dependencies import get_pg_db, get_db
-from typing import List
-from models.data import CommuneInfo
 
 router = APIRouter(
     prefix="/data"
@@ -40,13 +40,29 @@ def adding_data_to_db(
         print(body)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f'{error}')
     
-@router.get('/', tags=["Data"])
-def checkData(
+@router.get('/commune', tags=["Data"], summary="Get info about commune data and the geojson layer")
+def checkDataCommune(
     token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db),
 ):
     token_data = credentials(token)
-    return check_data(db)
+    info = check_data_commune()
+    return JSONResponse(content=jsonable_encoder(info))
+
+@router.get('/enveloppe', tags=["Data"], summary="Get info about enveloppe data and the geojson layer")
+def checkDataEnveloppe(
+    token: str = Depends(oauth2_scheme),
+):
+    token_data = credentials(token)
+    info = check_data_enveloppe()
+    return JSONResponse(content=jsonable_encoder(info))
+
+@router.get('/potentiel', tags=["Data"], summary="Get info about potentiel data and the geojson layer")
+def checkDataPotentiel(
+    token: str = Depends(oauth2_scheme),
+):
+    token_data = credentials(token)
+    info = check_data_potentiel()
+    return JSONResponse(content=jsonable_encoder(info))
 
 @router.delete('/', tags=["Data"])
 def cleanDatabase(
@@ -57,3 +73,11 @@ def cleanDatabase(
     token_data = credentials(token)
     background_tasks.add_task(clean_data,db)
     return {"message", "La base de données local est en cours de nettoyage."}
+
+@router.get('/potentiel/download', tags=["Data"], summary="Download potentiel geojson layer")
+def downloadPotentiel(
+    token: str = Depends(oauth2_scheme),
+):
+    token_data = credentials(token)
+    return download_potentiel_layer()
+    

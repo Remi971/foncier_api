@@ -9,7 +9,7 @@ class CenterDto(BaseModel):
 class CommuneDto(BaseModel):
     nom: str
     code: str
-    center: CenterDto
+    centre: CenterDto
 
 # class Batiment(BaseModel):
 #     ogc_fid : int

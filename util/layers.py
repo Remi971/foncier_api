@@ -18,7 +18,10 @@ layers = [
     "voiep_id",
     "zoncommuni_id",
     "commune_info",
+    "enveloppe_info",
     "enveloppe",
+    "potentiel_info",
+    "potentiel"
     "idx_batiment_id", 
     "idx_borne_id", 
     "idx_boulon_id", 
@@ -37,6 +40,9 @@ layers = [
     "idx_tsurf_id",
     "idx_voiep_id",
     "idx_zoncommuni_id",
-    "idx_enveloppe"
-    "idx_commune_info"
+    "idx_commune_info",
+    "idx_enveloppe",
+    "idx_enveloppe_info",
+    "idx_potentiel",
+    "idx_potentiel_info"
     ]

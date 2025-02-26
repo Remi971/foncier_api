@@ -1,3 +1,4 @@
+from fastapi.responses import StreamingResponse
 import geopandas as gpd
 import pandas as pd
 import requests
@@ -17,6 +18,9 @@ from dependencies import engine
 from util.layers import layers
 from schema.data import CommuneDto
 from models.data import CommuneInfo
+from .geoprocessing import Layer, LayerName
+import json
+import io
 
 def multi_to_single_polygon(gdf:gpd.GeoDataFrame):
     gdf_singlepoly: gpd.GeoSeries = gdf[gdf.geometry.type == 'Polygon']
@@ -37,8 +41,8 @@ def get_data(body: CommuneDto, notifId: str, dbpg: Session, db: Session):
         new_commune = CommuneInfo(
            name = body.nom,
            code = body.code ,
-           lat = body.center.coordinates[0],
-           long = body.center.coordinates[1]
+           lat = body.centre.coordinates[0],
+           long = body.centre.coordinates[1]
         ) 
         db.add(new_commune)
         db.commit()
@@ -115,17 +119,44 @@ def importEdigeoTHF(thf_list):
             ]
         ogr2ogr(cmdArgs)
         
-def check_data(db:Session) :
+def check_data_commune() :
     try:
-        query = "SELECT tex2 FROM commune_id LIMIT 1"
-        commune_query = db.execute(text(query))
-        commune_mapping = commune_query.mappings().all()
-        return commune_mapping[0].tex2
+        commune = Layer(LayerName.COMMUNE.value, engine)
+        commune_info = Layer(LayerName.COMMUNE_INFO.value, engine)
+        return {"data": commune.to_geojson(), "info": commune_info.getInfo()}
     except Exception as error:
-        if "no such table" in f"{error}":
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{error}")
-        else:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")
+    
+def check_data_enveloppe() :
+    try:
+        enveloppe = Layer(LayerName.ENVELOPPE.value, engine)
+        enveloppe_info = Layer(LayerName.ENVELOPPE_INFO.value, engine)
+        return {"data": enveloppe.to_geojson(), "info": enveloppe_info.getInfo()}
+    except Exception as error:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")
+    
+def check_data_potentiel() :
+    try:
+        potentiel = Layer(LayerName.POTENTIEL.value, engine)
+        potentiel_info = Layer(LayerName.POTENTIEL_INFO.value, engine)
+        return {"data": potentiel.to_geojson(), "info": potentiel_info.getInfo()}
+    except Exception as error:
+        print(error)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")
+    
+def download_potentiel_layer():
+    try:
+        potentiel = Layer(LayerName.POTENTIEL.value, engine)
+        geojson = potentiel.to_geojson()
+        geojson_str = json.dumps(geojson)
+        geojson_stream = io.StringIO(geojson)
+        return StreamingResponse(
+            iter([geojson_stream.getvalue()]),
+            media_type="application/json",
+            headers={'Content-Disposition': "attachment; filename=potentiel.geojson"}
+        )
+    except Exception as error:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")
         
 def clean_data(db:Session):
     try:

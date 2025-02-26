@@ -15,42 +15,33 @@ class CommuneInfo(Base):
 class Enveloppe(Base):
     __tablename__ = "enveloppe"
     fid = Column(Integer, primary_key=True)
-    geometry = Column(Geometry(geometry_type="POLYGON", srid=2154, name="geometry"))
-
-# class Batiment(Base):
-#     __tablename__ = LayerName.BATIMENT
-#     ogc_fid = Column(Integer, primary_key=True)
-#     object_rid = Column(String)
-#     dur = Column(String)
-#     tex = Column(String)
-#     creat_date = Column(Integer)
-#     update_date = Column(Integer)
-#     geom = Column(Geometry)
+    geom = Column(Geometry(geometry_type="POLYGON", srid=2154, name="geom"))
     
-# class Parcelle(Base):
-#     __tablename__ = LayerName.PARCELLE.value
-#     ogc_fid= Column(Integer, primary_key=True)
-#     object_rid = Column(String)
-#     idu = Column(String)
-#     indp = Column(String)
-#     geom = Column(Geometry)
- 
-# class Commune(Base):
-#     __tablename__ = LayerName.COMMUNE.value
-#     ogc_fid = Column(Integer, primary_key=True)
-#     object_fid = Column(String)
-#     idu = Column(String)
-#     tex2 = Column(String)
-#     creat_date = Column(Integer)
-#     update_date = Column(Integer)
-#     geom = Column(Geometry)
-     
-# class Tsurf(Base):
-#     __tablename__ = LayerName.TSURF.value
-#     ogc_fid = Column(Integer, primary_key=True)
-#     object_fid = Column(String)
-#     sym = Column(String)
-#     tex = Column(String)
-#     creat_date = Column(Integer)
-#     update_date = Column(Integer)
-#     geom = Column(Geometry)
+class Potentiel(Base):
+    __tablename__ = "potentiel"
+    id = Column(Integer, primary_key=True)
+    type = Column(String)
+    color = Column(String)
+    geom = Column(Geometry(geometry_type="POLYGON", srid=2154, name="geom"))
+    
+class EnveloppeInfo(Base):
+    __tablename__ = "enveloppe_info"
+    id = Column(Integer, primary_key=True)
+    minSurfBati = Column(Integer)
+    bufferBati = Column(Integer)
+    dilatation = Column(Integer)
+    erosion = Column(Integer)
+    minPartInBuffer = Column(Integer)
+    maxSurfTrou = Column(Integer)
+    minSurfEnv = Column(Integer)
+    maxSurfResidus = Column(Integer)
+    
+class PotentielInfo(Base):
+    __tablename__ = "potentiel_info"
+    id = Column(Integer, primary_key=True)
+    minSurfParNue = Column(Integer)
+    minSurfParBatie = Column(Integer)
+    maxCes = Column(Integer)
+    minSurfDivision = Column(Integer)
+    distBufferTest = Column(Integer)
+    distBufferBati = Column(Integer)

@@ -7,6 +7,7 @@ import geopandas as gpd
 import pandas as pd
 from services.process import envelop_creation, potentiel_calcul
 from dto.process import EnveloppeParamsDto
+from models.notification import Notification as NotificationsModel
 from schema.notifications import Notifications
 from dto.notifications import NotificationsStatusEnum, NotificationsTypeEnum, NotificationsState
 from services.notifications import Notifiyer
@@ -18,12 +19,13 @@ router = APIRouter(
 
 #TODO : user send inputs (enveloppe layer, or params for creating enveloppe layer) AND potentiel params
     
-@router.post('/potentiel', tags=["Processing"], summary="Register Potentiel Operation")
+@router.post('/potentiel', tags=["Processing"], summary="Calculate the potentiel available into the envelop")
 def process_potentiel(
     background_tasks: BackgroundTasks,
     token: str = Depends(oauth2_scheme),
     body: PotentielParamsDto = Body,
-    db: Session = Depends(get_pg_db)
+    db_psql: Session = Depends(get_pg_db),
+    db: Session = Depends(get_db)
     ):
     try:
         token_data = credentials(token)
@@ -33,23 +35,38 @@ def process_potentiel(
                 "type": NotificationsTypeEnum.POTENTIEL,
                 "recipient": token_data.id
             }
-        notificationId = Notifiyer(state=NotificationsState.CREATION, db=db, notif=newNotif )
-        background_tasks.add_task(potentiel_calcul, body, db, notificationId)
+        notification = Notifiyer(state=NotificationsState.CREATION, db=db_psql, notif=newNotif, id=None )
+        notifId = notification.action()
+        background_tasks.add_task(potentiel_calcul, body, db, db_psql, notifId)
+        return "Caclcul du Potentiel"
     except Exception as error:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, details=f"{error}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")
     
     
-@router.post('/enveloppe', tags=["Processing"])
+@router.post('/enveloppe', tags=["Processing"], summary="Calculate the urban envelop of the city")
 def process_envelop(
     background_tasks: BackgroundTasks,
     token: str = Depends(oauth2_scheme),
     body: EnveloppeParamsDto = Body,
+    db_psql: Session = Depends(get_pg_db),
     db: Session = Depends(get_db)
 ):
     try:
-        # token_data = credentials(token)
-        background_tasks.add_task(envelop_creation, body, db)
+        token_data = credentials(token)
+        newNotif: NotificationsModel = {
+            "message": "Calcul de l'enveloppe en cours",
+            "status": NotificationsStatusEnum.PENDING,
+            "type": NotificationsTypeEnum.ENVELOPPE,
+            "recipient": token_data.id
+        }
+        notification = Notifiyer(state=NotificationsState.CREATION, db=db_psql, notif=newNotif, id=None)
+        notifId = notification.action()
+        background_tasks.add_task(envelop_creation, body, db, db_psql, notifId)
         return "Creating Enveloppe"
     except Exception as error:
         raise HTTPException(status_code=500, detail=f"{error}")
+    
+# @router.put('/enveloppe', tags=["Processing"], summary="")
+# def update_enveloppe():
+#     ...
     

@@ -33,7 +33,7 @@ origins = [
 
 app = FastAPI(
     title="CartoFoncier",
-    description="CartoFoncier API",
+    description="CartoFoncier API - Permet de télécharger la dernière version des données cadastrales du PCI-vecteur avec lesquelles sera calculer l'enveloppe urbaine ainsi que le potentiel foncier composé de parcelles nues et de division parcellaire. ",
     version="0.0.1",
     lifespan=init_db
     )

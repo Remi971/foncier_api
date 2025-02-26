@@ -15,5 +15,5 @@ class EnveloppeParamsDto(BaseModel):
     erosion: int = -30 # Distance Buffer pour l'érosion
     minPartInBuffer: int = 50 # Part minimale de la parcelle comprise dans le buffer dilation-erosion
     maxSurfTrou: int = 2000 # Surface maximale des trous à combler
-    minSurfEnv: int = 10000 # Surface minimale des enveloppes
+    minSurfEnv: int = 30000 # Surface minimale des enveloppes
     maxSurfResidus: int = 5 # Surface maximale des résidus à supprimer
