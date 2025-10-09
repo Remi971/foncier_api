@@ -9,9 +9,14 @@ router = APIRouter(
     prefix= "/notifications"
 )
 
-db_psql = EngineDb(DatabaseTypeEnum.POSTGRESQL).getSession()
-
+def getDb():
+    database = EngineDb(DatabaseTypeEnum.POSTGRESQL).getSession()
+    try:
+        yield database
+    finally:
+        database.close()
+        
 @router.get("/last", tags=["Notifications"])
-def get_last_notification(db: Session = Depends(db_psql), token: str = Depends(oauth2_scheme)):
+def get_last_notification(db: Session = Depends(getDb), token: str = Depends(oauth2_scheme)):
     tokens = credentials(token)
     return get_last_notif(db, tokens.id)

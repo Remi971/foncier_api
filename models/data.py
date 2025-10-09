@@ -1,5 +1,5 @@
 from geoalchemy2 import Geometry, Geography
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy import Column, Integer, String, Float
 from dto.data import LayerName
 

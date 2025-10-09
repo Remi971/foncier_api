@@ -10,15 +10,12 @@ router = APIRouter(
     prefix="/users"
 )
 
-def getDb():
-    database = EngineDb(DatabaseTypeEnum.POSTGRESQL).getSession()
-    try:
-        yield database
-    finally:
-        database.close()
+
+database = EngineDb(DatabaseTypeEnum.POSTGRESQL)
+
 
 @router.get("/", tags=["User"], summary="Get All Users")
-def get_all(db: Session = Depends(getDb), token: str = Depends(oauth2_scheme)):
+def get_all(db: Session = Depends(database.get_db), token: str = Depends(oauth2_scheme)):
     token_data = credentials(token)
     return get_all_users(db)
 
@@ -26,30 +23,30 @@ def get_all(db: Session = Depends(getDb), token: str = Depends(oauth2_scheme)):
 def update(
     id: str = Path, 
     body: User_update = Body,
-    db: Session = Depends(getDb),
+    db: Session = Depends(database.get_db),
     token: str = Depends(oauth2_scheme)
     ):
     token_data = credentials(token)
     return update_user(token_data.id, body, db)
 
 @router.get("/me", tags=["User"], summary="Get My Profile")
-def get_my_profile(db: Session = Depends(getDb), token: str = Depends(oauth2_scheme)):
+def get_my_profile(db: Session = Depends(database.get_db), token: str = Depends(oauth2_scheme)):
     token_data = credentials(token)
     return get_current_user(db, token_data.email)
 
 @router.get("/{id}", tags=["User"], summary="Get One User")
-def get(id : str = Path, db: Session = Depends(getDb), token: str = Depends(oauth2_scheme)):
+def get(id : str = Path, db: Session = Depends(database.get_db), token: str = Depends(oauth2_scheme)):
     token_data = credentials(token)
     return get_user(id, db)
    
     
 @router.delete("/{id}", tags=["User"], summary="Delete One User")
-def delete(id: str = Path, db : Session = Depends(getDb), token: str = Depends(oauth2_scheme)):
+def delete(id: str = Path, db : Session = Depends(database.get_db), token: str = Depends(oauth2_scheme)):
     token_data = credentials(token)
     return delete_user(id, db)
 
 @router.post("/signin", tags=["User"], summary="Create User")
-def create(body: Users = Body, db: Session = Depends(getDb)):
+def create(body: Users = Body, db: Session = Depends(database.get_db)):
     user = None
     try:
         user = create_user(body, db)

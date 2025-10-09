@@ -1,2 +1,9 @@
 .app_foncier
 .env
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.whl

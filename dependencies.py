@@ -57,4 +57,5 @@ class EngineDb:
             database.close()
         
 # Security
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")        
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token") 
+print("OAuth2passwordBearer : ", oauth2_scheme)       

@@ -53,6 +53,9 @@ app.include_router(notifications.router)
 
 database = EngineDb(DatabaseTypeEnum.POSTGRESQL)
    
+@app.get("/", tags=["Root"])
+def root():
+    return {"message": "Welcome to CartoFoncier API!"}
 
 @app.post('/token',  tags=['authentication'], summary="Login")
 def login(form_login : OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)) -> Token:
