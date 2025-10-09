@@ -3,7 +3,7 @@ from schema.notifications import Notifications
 from sqlalchemy.orm import Session
 from models.notification import Notification as notif_model
 from dto.notifications import NotificationsState
-from dependencies import get_pg_db
+from dependencies import EngineDb
 
 class Notifiyer:
     def __init__(self, state: NotificationsState, db: Session, notif: Notifications | None, id: str | None):

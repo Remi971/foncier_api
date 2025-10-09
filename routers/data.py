@@ -9,19 +9,27 @@ from schema.notifications import NotificationsModel
 from schema.data import CommuneDto
 from dto.notifications import NotificationsStatusEnum, NotificationsTypeEnum, NotificationsState
 from sqlalchemy.orm import Session
-from dependencies import get_pg_db, get_db
+from dependencies import EngineDb
+from dto.database import DatabaseTypeEnum
 
 router = APIRouter(
     prefix="/data"
 )
 
-@router.post('/add/sqlite', tags=["Data"], summary="Get The PCI-Vector Data", status_code=status.HTTP_202_ACCEPTED)
+def getDb():
+    database = EngineDb(DatabaseTypeEnum.POSTGRESQL).getSession()
+    try:
+        yield database
+    finally:
+        database.close()
+
+@router.post('/add/sqlite', tags=["Data"], summary="Add PCI-Vector Data to Database", status_code=status.HTTP_202_ACCEPTED)
 def adding_data_to_db(
     background_tasks: BackgroundTasks,
     body: CommuneDto= Body(),
     token: str = Depends(oauth2_scheme),
-    db_psql: Session = Depends(get_pg_db),
-    db: Session = Depends(get_db),
+    db_psql: Session = Depends(getDb),
+    db: Session = Depends(getDb),
     ):
     try:
         token_data = credentials(token)
@@ -68,7 +76,7 @@ def checkDataPotentiel(
 def cleanDatabase(
     background_tasks: BackgroundTasks,
     token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
+    db: Session = Depends(getDb)
 ):
     token_data = credentials(token)
     background_tasks.add_task(clean_data,db)

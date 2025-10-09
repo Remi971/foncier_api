@@ -14,7 +14,7 @@ from dto.notifications import NotificationsState, NotificationsStatusEnum, Notif
 from schema.notifications import Notifications
 from sqlite3 import OperationalError
 from sqlalchemy import inspect, text
-from dependencies import engine
+from dependencies import EngineDb
 from util.layers import layers
 from schema.data import CommuneDto
 from models.data import CommuneInfo
@@ -121,24 +121,24 @@ def importEdigeoTHF(thf_list):
         
 def check_data_commune() :
     try:
-        commune = Layer(LayerName.COMMUNE.value, engine)
-        commune_info = Layer(LayerName.COMMUNE_INFO.value, engine)
+        commune = Layer(LayerName.COMMUNE.value, EngineDb.engine)
+        commune_info = Layer(LayerName.COMMUNE_INFO.value, EngineDb.engine)
         return {"data": commune.to_geojson(), "info": commune_info.getInfo()}
     except Exception as error:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")
     
 def check_data_enveloppe() :
     try:
-        enveloppe = Layer(LayerName.ENVELOPPE.value, engine)
-        enveloppe_info = Layer(LayerName.ENVELOPPE_INFO.value, engine)
+        enveloppe = Layer(LayerName.ENVELOPPE.value, EngineDb.engine)
+        enveloppe_info = Layer(LayerName.ENVELOPPE_INFO.value, EngineDb.engine)
         return {"data": enveloppe.to_geojson(), "info": enveloppe_info.getInfo()}
     except Exception as error:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")
     
 def check_data_potentiel() :
     try:
-        potentiel = Layer(LayerName.POTENTIEL.value, engine)
-        potentiel_info = Layer(LayerName.POTENTIEL_INFO.value, engine)
+        potentiel = Layer(LayerName.POTENTIEL.value, EngineDb.engine)
+        potentiel_info = Layer(LayerName.POTENTIEL_INFO.value, EngineDb.engine)
         return {"data": potentiel.to_geojson(), "info": potentiel_info.getInfo()}
     except Exception as error:
         print(error)
@@ -146,7 +146,7 @@ def check_data_potentiel() :
     
 def download_potentiel_layer():
     try:
-        potentiel = Layer(LayerName.POTENTIEL.value, engine)
+        potentiel = Layer(LayerName.POTENTIEL.value, EngineDb.engine)
         geojson = potentiel.to_geojson()
         geojson_str = json.dumps(geojson)
         geojson_stream = io.StringIO(geojson)
@@ -160,7 +160,7 @@ def download_potentiel_layer():
         
 def clean_data(db:Session):
     try:
-        inspector = inspect(engine)
+        inspector = inspect(EngineDb.engine)
         for table_name in inspector.get_table_names():
             if table_name in layers:
                 query = f"DELETE FROM {table_name}"

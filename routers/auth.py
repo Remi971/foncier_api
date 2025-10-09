@@ -4,19 +4,25 @@ from pydantic import EmailStr
 from schema.auth import Token
 from services.auth import create_access_token, credentials
 from sqlalchemy.orm import Session
-from dependencies import get_pg_db
 import os
 from dotenv import load_dotenv
 from datetime import timedelta
 from schema.users import Users_create
 from services.user import create_user, authenticate_user
-from dependencies import settings, oauth2_scheme
+from dependencies import settings, oauth2_scheme, EngineDb
+from dto.database import DatabaseTypeEnum
 router = APIRouter(
     prefix='/auth'
 )
+def getDb():
+    database = EngineDb(DatabaseTypeEnum.POSTGRESQL).getSession()
+    try:
+        yield database
+    finally:
+        database.close()
 
 @router.post('/signin', tags=['authentication'])
-def signin(body: Users_create = Depends(), db: Session = Depends(get_pg_db)) -> Token:
+def signin(body: Users_create = Depends(), db: Session = Depends(getDb)) -> Token:
     user = create_user(body, db)
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     token = create_access_token(
@@ -27,7 +33,7 @@ def signin(body: Users_create = Depends(), db: Session = Depends(get_pg_db)) -> 
     
     
 @router.post('/login',  tags=['authentication'])
-def login(form_login : OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_pg_db)) -> Token:
+def login(form_login : OAuth2PasswordRequestForm = Depends(), db: Session = Depends(getDb)) -> Token:
     user = authenticate_user(db, form_login.username, form_login.password)
     if not user:
         raise HTTPException(

@@ -1,10 +1,10 @@
-FROM python:3.12
+FROM python:3.13.8-slim
 
-RUN apt-get update && apt-get install -y iputils-ping gdal-bin libgdal-dev libsqlite3-mod-spatialite
+RUN apt-get update && apt-get install -y iputils-ping gdal-bin aptitude libpq-dev libgdal-dev libsqlite3-mod-spatialite gcc g++
 
 # Install Poetry
-RUN pip install --no-cache-dir poetry
-    
+RUN export MSGPACK_PUREPYTHON=1 && pip3 install poetry
+
 # RUN export CPLUS_INCLUDE_PATH=/usr/include/gdal && export C_INCLUDE_PATH=/usr/include/gdal
 
 WORKDIR /app
@@ -13,6 +13,7 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock /app/
 
 # Install dependencies
+
 RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi
 
 COPY . /app

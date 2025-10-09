@@ -2,13 +2,17 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from dto.process import EnveloppeParamsDto, PotentielParamsDto
-from dependencies import engine
+from dependencies import EngineDb
 from dto.data import LayerName
+from dto.database import DatabaseTypeEnum
 from .geoprocessing import Layer, processing_envelop, processing_potentiel
 from models.notification import Notification as NotificationsModel
 from dto.notifications import NotificationsTypeEnum, NotificationsState, NotificationsStatusEnum
 from services.notifications import Notifiyer
 from services.geoprocessing import enveloppeParamsControl, saveEnvelopInDb, potentielParamsControl, savePotentielInDb
+
+engine = EngineDb(DatabaseTypeEnum.SQLITE).getEngine()
+
 
 def envelop_creation(body: EnveloppeParamsDto, db: Session, dbpg: Session, notifId: str):
     try:

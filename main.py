@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Path, Body, Query, Depends, HTTPException, status, WebSocket, WebSocketException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from dependencies import oauth2_scheme, engine_pgsql, engine_supabase, engine, get_pg_db, get_supa_db, settings
+from dependencies import oauth2_scheme, EngineDb, settings
 from routers import data, process, users, notifications
 from models.users import Base as BaseUsers
 from models.notification import Base as BaseNotifications
@@ -14,6 +14,7 @@ from services.user import authenticate_user, create_user
 from services.auth import create_access_token, credentials
 from datetime import timedelta
 from pydantic import EmailStr
+from dto.database import DatabaseTypeEnum
 #TEST
 from schema.notifications import Notifications, NotificationsMessage
 from services.notifications import Notifiyer, get_last_notif
@@ -22,14 +23,13 @@ from dto.notifications import NotificationsState, NotificationsStatusEnum, Notif
 @asynccontextmanager
 async def init_db(app: FastAPI):
     print("##### init_db #####")
-    BaseUsers.metadata.create_all(bind=engine_supabase)
-    BaseNotifications.metadata.create_all(bind=engine_pgsql)
-    BaseData.metadata.create_all(bind=engine)
+    BaseUsers.metadata.create_all(bind=EngineDb(DatabaseTypeEnum.POSTGRESQL).engine) ## Use a different database (supabase)
+    BaseNotifications.metadata.create_all(bind=EngineDb(DatabaseTypeEnum.POSTGRESQL).engine)
+    BaseData.metadata.create_all(bind=EngineDb(DatabaseTypeEnum.SQLITE).engine)
     yield
     
-origins = [
-    settings.BASE_URL
-]
+origins = settings.BASE_URL.split(",")
+print(origins)
 
 app = FastAPI(
     title="CartoFoncier",
@@ -50,8 +50,12 @@ app.include_router(process.router)
 app.include_router(users.router)
 app.include_router(notifications.router)
 
+
+database = EngineDb(DatabaseTypeEnum.POSTGRESQL)
+   
+
 @app.post('/token',  tags=['authentication'], summary="Login")
-def login(form_login : OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_supa_db)) -> Token:
+def login(form_login : OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)) -> Token:
     user = authenticate_user(db, form_login.username, form_login.password)
     if not user:
         raise HTTPException(
@@ -66,13 +70,14 @@ def login(form_login : OAuth2PasswordRequestForm = Depends(), db: Session = Depe
     return Token(access_token=token["access_token"], refresh_token=token["refresh_token"], token_type="bearer")
 
 @app.post('/signin', tags=['authentication'], summary="Sign in")
-def signin(body: Users_create = Body, db: Session = Depends(get_supa_db)) -> Token:
+def signin(body: Users_create = Body, db: Session = Depends(database.get_db)) -> Token:
     user = create_user(body, db)
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     token = create_access_token(
         data={"sub": user.email, "id": str(user.id)}, expires_delta=access_token_expires
     )
     return Token(access_token=token["access_token"], refresh_token=token["refresh_token"], token_type="bearer")
+        
 
 @app.post('/refresh_token', tags=['authentication'], summary="Refresh Token")
 def refresh_token(refresh_token : str = Depends(oauth2_scheme)):
@@ -89,7 +94,7 @@ def reset_password(email: EmailStr):
     
 #TODO : protect the websocket endpoints
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Depends(get_pg_db)):
+async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Depends(database.get_db)):
     token_data = credentials(token)
     await websocket.accept()
     while True:
@@ -110,7 +115,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Dep
 @app.delete("/notif/{id}", tags=["TEST"])
 def deleteNotif(
     id: str = Path,
-    db: Session = Depends(get_pg_db),
+    db: Session = Depends(database.get_db),
     token: str = Depends(oauth2_scheme), 
 ):
     token_data = credentials(token)
@@ -120,6 +125,6 @@ def deleteNotif(
     
 @app.get("/notif", tags=['TEST'])
 def getLastNotif(
-    db: Session = Depends(get_pg_db)
+    db: Session = Depends(database.get_db),
 ):
     return get_last_notif(db)

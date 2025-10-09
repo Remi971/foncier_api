@@ -6,25 +6,28 @@ from dto.users import Roles
 from sqlalchemy.exc import DataError
 from datetime import datetime
 from services.auth import get_password_hash, verify_password, credentials, oauth2_scheme
+from psycopg2.errorcodes import UNIQUE_VIOLATION
+from psycopg2 import errors
 
 
 def create_user(body: Users_create, db: Session):
-    try:
-        newUser = body.model_dump()
-        print(newUser)
-        new_user = user_model(
-            firstname=newUser["firstname"], 
-            lastname=newUser["lastname"], 
-            email=newUser["email"], 
-            hashed_password=get_password_hash(newUser["password"]),
-            role=Roles.BASIC.value,
-            )
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-        return new_user
-    except Exception as error:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")
+    newUser = body.model_dump()
+    #Check if exists
+    user = db.query(user_model).filter(user_model.email == newUser["email"]).first()
+    if user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"User with email {newUser['email']} already exists")
+    new_user = user_model(
+        firstname=newUser["firstname"], 
+        lastname=newUser["lastname"], 
+        email=newUser["email"], 
+        hashed_password=get_password_hash(newUser["password"]),
+        role=Roles.BASIC.value,
+        )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+  
     
 def authenticate_user(db, username: str, password: str) -> Users:
     user = get_user_by_email(db, username)
