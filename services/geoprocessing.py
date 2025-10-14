@@ -10,7 +10,7 @@ from dto.data import LayerName
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 from geoalchemy2.shape import from_shape
-from models.data import Enveloppe as model_enveloppe, EnveloppeInfo as model_enveloppe_info, Potentiel as model_potentiel, PotentielInfo as model_potentiel_info
+from models_temp.data import Enveloppe as model_enveloppe, EnveloppeInfo as model_enveloppe_info, Potentiel as model_potentiel, PotentielInfo as model_potentiel_info
 from schema.data import CommuneDto, CenterDto
 
 class Layer:

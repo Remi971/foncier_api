@@ -45,13 +45,13 @@ def delete(id: str = Path, db : Session = Depends(database.get_db), token: str =
     token_data = credentials(token)
     return delete_user(id, db)
 
-@router.post("/signin", tags=["User"], summary="Create User")
-def create(body: Users = Body, db: Session = Depends(database.get_db)):
-    user = None
-    try:
-        user = create_user(body, db)
-    except Exception as error:
-        raise HTTPException(status_code=400, detail=f"User with email {body.email} already exists")
-    if not user:
-        raise HTTPException(status_code=400, detail="Error creating user")
-    return user
+# @router.post("/signin", tags=["User"], summary="Create User")
+# def create(body: Users = Body, db: Session = Depends(database.get_db)):
+#     user = None
+#     try:
+#         user = create_user(body, db)
+#     except Exception as error:
+#         raise HTTPException(status_code=400, detail=f"User with email {body.email} already exists")
+#     if not user:
+#         raise HTTPException(status_code=400, detail="Error creating user")
+#     return user

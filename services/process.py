@@ -6,7 +6,7 @@ from dependencies import EngineDb
 from dto.data import LayerName
 from dto.database import DatabaseTypeEnum
 from .geoprocessing import Layer, processing_envelop, processing_potentiel
-from models.notification import Notification as NotificationsModel
+from models import Notification as NotificationsModel
 from dto.notifications import NotificationsTypeEnum, NotificationsState, NotificationsStatusEnum
 from services.notifications import Notifiyer
 from services.geoprocessing import enveloppeParamsControl, saveEnvelopInDb, potentielParamsControl, savePotentielInDb

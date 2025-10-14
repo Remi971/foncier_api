@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status, Depends
 from schema.notifications import Notifications
 from sqlalchemy.orm import Session
-from models.notification import Notification as notif_model
+from models import Notification as notif_model
 from dto.notifications import NotificationsState
 from dependencies import EngineDb
 

@@ -1,4 +1,19 @@
 services:
+  # MinIO (simulation de S3)
+  minio:
+    image: minio/minio
+    container_name: minio_s3
+    ports:
+      - "9000:9000"  # API (pour les requêtes boto3)
+      - "9001:9001"  # Console d'administration (accès via http://localhost:9001)
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - ipv6_network
   db:
     image: postgres
     restart: always
@@ -6,46 +21,124 @@ services:
       POSTGRES_PASSWORD: Gwada971
       POSTGRES_USER: postgres
       POSTGRES_DB: foncier
-      PGDATA: /var/lib/postgresql/data/pgdata
+      # PGDATA: /var/lib/postgresql/data
     volumes:
       - pg_data:/var/lib/postgresql/data
     ports:
       - "5434:5432"  # Correction du mapping du port : local:5434 vers container:5432
-    # networks:
-    #   - ipv6_network
+    networks:
+      - ipv6_network
     healthcheck:
       test: ["CMD", "pg_isready", "-d", "foncier", "-U", "postgres"]
       interval: 2s
       timeout: 5s
       retries: 10
 
-  app:
+  api:
     build: .
     environment:
-      TOKEN_ALGORITHM: HS256
-      TOKEN_SECRET: ceef2786ae5f2009f4d8f99b4056cf56a7d4d3eb2350e6606741501242bd0b3e
-      ACCESS_TOKEN_EXPIRE_MINUTES: 5
-      DATABASE_URL_SQLITE: sqlite:///db.sqlite
-      DATABASE_URL_POSTGRES: postgresql://postgres:Gwada971@db:5432/foncier
-    container_name: foncier-api
+      DATABASE_URL : "postgresql://postgres:remi@localhost:5432/foncier"
+      TOKEN_ALGORITHM : "HS256"
+      TOKEN_SECRET : "ceef2786ae5f2009f4d8f99b4056cf56a7d4d3eb2350e6606741501242bd0b3e"
+      ACCESS_TOKEN_EXPIRE_MINUTES : 15
+      REFRESH_TOKEN_EXPIRE_MINUTES : 30
+      BASE_URL : "http://localhost,http://localhost:5173,https://www.thunderclient.com,*"
+      ORCHESTRATION_URL : "http://orchestration:8888"
+      MICROSERVICE_SIG : "http://localhost:8880"
+    container_name: api
     command: "uvicorn main:app --host 0.0.0.0 --port 80 --reload"
-    # networks:
-    #   - ipv6_network
+    networks:
+      - ipv6_network
     ports: 
       - "8080:80"
     volumes:
-      - .:/app
+      - .:/api
     depends_on:
       db:
         condition: service_healthy
 
+  sig:
+    build: ../foncier_sig
+    environment:
+      DATABASE_URL_POSTGRES: postgresql://postgres:Gwada971@db:5432/foncier
+    container_name: sig
+    command: "uvicorn main:app --host 0.0.0.0 --port 8880 --reload"
+    networks:
+      - ipv6_network
+    ports: 
+      - "8880:8880"
+    depends_on:
+      db:
+        condition: service_healthy
+  
+    # Redis (pour Celery)
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - ipv6_network
+
+  # API orchestration:
+  orchestration:
+    build: 
+      context: ../foncier_orchestration
+      dockerfile: Dockerfile
+    container_name: orchestration
+    command: "uvicorn main:app --host 0.0.0.0 --port 8888 --reload"
+    ports:
+      - "8888:8888"
+    environment:
+      DATABASE_URL: postgresql://postgres:Gwada971@db:5432/foncier
+      MINIO_SECRET_KEY : "minioadmin"
+      MINIO_ACCESS_KEY : "minioadmin"
+      MINIO_ENDPOINT : "http://minio:9000"
+      MINIO_BUCKET_NAME : "cartofoncier"
+      CARTOFONCIER_API_URL : "http://app:8080"
+      MICROSERVICE_SIG : "http://localhost:8880"
+      BROKER_URL : "redis://redis:6379/0"
+    networks:
+      - ipv6_network
+    depends_on:
+      - minio
+      - db
+      - redis
+      - api
+      - sig
+  
+   # Service 2 : Worker Celery (exécute les tâches en arrière-plan)
+  orchestration-worker:
+    build:
+      context: ../foncier_orchestration
+      dockerfile: Dockerfile
+    container_name: orchestration-worker
+    command: celery -A task worker --loglevel=info  # Lance le worker Celery
+    depends_on:
+      - redis
+      - orchestration
+    networks:
+      - ipv6_network
+    environment:
+      DATABASE_URL: postgresql://postgres:Gwada971@db:5432/foncier
+      MINIO_SECRET_KEY : "minioadmin"
+      MINIO_ACCESS_KEY : "minioadmin"
+      MINIO_ENDPOINT : "http://minio:9000"
+      MINIO_BUCKET_NAME : "cartofoncier"
+      CARTOFONCIER_API_URL : "http://app:8080"
+      MICROSERVICE_SIG : "http://localhost:8880"
+      BROKER_URL : "redis://redis:6379/0"
+  
 volumes:
   pg_data:
-# networks:
-#   ipv6_network:
-#     driver: bridge
-#     enable_ipv6: true
-#     ipam:
-#       driver: default
-#       config:
-#         - subnet: "fd00:abcd:1234::/64"
+    driver: local
+  minio_data:
+
+networks:
+  ipv6_network:
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      driver: default
+      config:
+        - subnet: "fd00:abcd:1234::/64"

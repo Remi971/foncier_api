@@ -1,13 +1,10 @@
 from fastapi import FastAPI, Path, Body, Query, Depends, HTTPException, status, WebSocket, WebSocketException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from dependencies import oauth2_scheme, EngineDb, settings
-from routers import data, process, users, notifications
-from models.users import Base as BaseUsers
-from models.notification import Base as BaseNotifications
-from models.data import Base as BaseData
+from dependencies import oauth2_scheme, EngineDb, env
+from routers import data, process, users, notifications, orchestrate
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, scoped_session, sessionmaker
 from schema.auth import Token
 from schema.users import Users_create
 from services.user import authenticate_user, create_user
@@ -15,21 +12,22 @@ from services.auth import create_access_token, credentials
 from datetime import timedelta
 from pydantic import EmailStr
 from dto.database import DatabaseTypeEnum
+from models import Base
 #TEST
 from schema.notifications import Notifications, NotificationsMessage
 from services.notifications import Notifiyer, get_last_notif
 from dto.notifications import NotificationsState, NotificationsStatusEnum, NotificationsTypeEnum
 
+origins = env.BASE_URL.split(",")
+
+database = EngineDb(DatabaseTypeEnum.POSTGRESQL)
+
 @asynccontextmanager
 async def init_db(app: FastAPI):
     print("##### init_db #####")
-    BaseUsers.metadata.create_all(bind=EngineDb(DatabaseTypeEnum.POSTGRESQL).engine) ## Use a different database (supabase)
-    BaseNotifications.metadata.create_all(bind=EngineDb(DatabaseTypeEnum.POSTGRESQL).engine)
-    BaseData.metadata.create_all(bind=EngineDb(DatabaseTypeEnum.SQLITE).engine)
+    Base.metadata.create_all(bind=database.engine)
+    print("##### DB Created #####")
     yield
-    
-origins = settings.BASE_URL.split(",")
-print(origins)
 
 app = FastAPI(
     title="CartoFoncier",
@@ -43,18 +41,14 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*']
-    
 )
-app.include_router(data.router)
-app.include_router(process.router)
+
 app.include_router(users.router)
 app.include_router(notifications.router)
-
-
-database = EngineDb(DatabaseTypeEnum.POSTGRESQL)
+app.include_router(orchestrate.router)
    
-@app.get("/", tags=["Root"])
-def root():
+@app.get("/health", tags=["Root"])
+def health_check():
     return {"message": "Welcome to CartoFoncier API!"}
 
 @app.post('/token',  tags=['authentication'], summary="Login")
@@ -66,7 +60,7 @@ def login(form_login : OAuth2PasswordRequestForm = Depends(), db: Session = Depe
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(minutes=env.ACCESS_TOKEN_EXPIRE_MINUTES)
     token = create_access_token(
         data={"sub": user.email, "id": str(user.id) }, expires_delta=access_token_expires
     )
@@ -75,7 +69,7 @@ def login(form_login : OAuth2PasswordRequestForm = Depends(), db: Session = Depe
 @app.post('/signin', tags=['authentication'], summary="Sign in")
 def signin(body: Users_create = Body, db: Session = Depends(database.get_db)) -> Token:
     user = create_user(body, db)
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(minutes=env.ACCESS_TOKEN_EXPIRE_MINUTES)
     token = create_access_token(
         data={"sub": user.email, "id": str(user.id)}, expires_delta=access_token_expires
     )
@@ -85,7 +79,7 @@ def signin(body: Users_create = Body, db: Session = Depends(database.get_db)) ->
 @app.post('/refresh_token', tags=['authentication'], summary="Refresh Token")
 def refresh_token(refresh_token : str = Depends(oauth2_scheme)):
     token = credentials(refresh_token)
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(minutes=env.ACCESS_TOKEN_EXPIRE_MINUTES)
     token = create_access_token(
         data={"sub": token.email, "id": str(token.id)}, expires_delta=access_token_expires
     )

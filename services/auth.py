@@ -7,13 +7,13 @@ import bcrypt
 from dependencies import oauth2_scheme
 from datetime import datetime, timedelta, timezone
 from schema.auth import TokenData
-from dependencies import settings
+from dependencies import env
 
 # pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def decode_token(token):
     #return user info
-    info = jwt.decode(token, settings.TOKEN_SECRET, algorithms=[settings.TOKEN_ALGORITHM])
+    info = jwt.decode(token, env.TOKEN_SECRET, algorithms=[env.TOKEN_ALGORITHM])
     return info
     
 def verify_password(plain_password: str, hash_password: str):
@@ -35,7 +35,7 @@ def credentials(token: str = Depends(oauth2_scheme)):
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, settings.TOKEN_SECRET, algorithms=[settings.TOKEN_ALGORITHM])
+        payload = jwt.decode(token, env.TOKEN_SECRET, algorithms=[env.TOKEN_ALGORITHM])
         email: str = payload.get("sub")
         id: str = payload.get("id")
         if email is None:
@@ -54,11 +54,11 @@ def create_access_token(data: None, expires_delta: timedelta | None = None):
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=5)
-    refresh_expire = datetime.now(timezone.utc) + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+    refresh_expire = datetime.now(timezone.utc) + timedelta(minutes=env.REFRESH_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
-    access_token = jwt.encode(to_encode, settings.TOKEN_SECRET, algorithm=settings.TOKEN_ALGORITHM)
+    access_token = jwt.encode(to_encode, env.TOKEN_SECRET, algorithm=env.TOKEN_ALGORITHM)
     
     refresh_to_encode =data.copy()
     refresh_to_encode.update({"exp": refresh_expire})
-    refresh_token = jwt.encode(refresh_to_encode, settings.TOKEN_SECRET, algorithm=settings.TOKEN_ALGORITHM)
+    refresh_token = jwt.encode(refresh_to_encode, env.TOKEN_SECRET, algorithm=env.TOKEN_ALGORITHM)
     return {"access_token": access_token, "refresh_token": refresh_token}

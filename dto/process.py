@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from enum import Enum
 
 class PotentielParamsDto(BaseModel):
     minSurfParNue: int = 400 # Surface minimale de la parcelle non bâtie
@@ -17,3 +18,13 @@ class EnveloppeParamsDto(BaseModel):
     maxSurfTrou: int = 2000 # Surface maximale des trous à combler
     minSurfEnv: int = 30000 # Surface minimale des enveloppes
     maxSurfResidus: int = 5 # Surface maximale des résidus à supprimer
+    
+class CommuneDto(BaseModel):
+    code_insee: str
+    nom: str
+    
+class ProcessType(Enum):
+    DATA_DOWNLOAD = "DATA_DOWNLOAD"
+    DATA_PROCESSING = "DATA_PROCESSING"
+    POTENTIEL_CALCULATION = "POTENTIEL_CALCULATION"
+    ENVELOPPE_GENERATION = "ENVELOPPE_GENERATION"

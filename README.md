@@ -1,5 +1,7 @@
 # API App foncière (CartoFoncier)
 
+API pour la gestion des users et des notifications et l'authentification
+Microservice pour les traitements SIG
 Description du projet avec liens externes...
 
 ## Code Flow

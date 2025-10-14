@@ -3,21 +3,25 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.event import listen
 from geoalchemy2 import load_spatialite
 from fastapi.security import OAuth2PasswordBearer
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from dto.database import DatabaseTypeEnum
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file='.env.development', env_file_encoding='utf-8')
-    DATABASE_URL_SQLITE: str
-    DATABASE_URL_SUPABASE: str
-    DATABASE_URL_POSTGRES: str
-    TOKEN_ALGORITHM: str
-    TOKEN_SECRET: str
-    ACCESS_TOKEN_EXPIRE_MINUTES: int
-    REFRESH_TOKEN_EXPIRE_MINUTES: int
-    BASE_URL: str
+class Env:
+    DATABASE_URL= os.getenv("DATABASE_URL")
+    BROKER_URL = os.getenv("BROKER_URL")
+    MICROSERVICE_SIG = os.getenv("MICROSERVICE_SIG")
+    ENV = os.getenv("ENV")
+    TOKEN_ALGORITHM = os.getenv("TOKEN_ALGORITHM")
+    TOKEN_SECRET = os.getenv("TOKEN_SECRET")
+    ACCESS_TOKEN_EXPIRE_MINUTE = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
+    REFRESH_TOKEN_EXPIRE_MINUTES = os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES")
+    BASE_URL = os.getenv("BASE_URL")
+    ORCHESTRATION_URL = os.getenv("ORCHESTRATION_URL")
     
-settings = Settings()
+env = Env()
+print(env.DATABASE_URL)
 
 class EngineDb:
     def __init__(self, dataType: DatabaseTypeEnum):
@@ -28,12 +32,12 @@ class EngineDb:
     def createEngine(self):
         match self.dataType:
             case DatabaseTypeEnum.SQLITE:
-                self.engine = create_engine(settings.DATABASE_URL_SQLITE)
+                self.engine = create_engine(env.DATABASE_URL_SQLITE)
                 listen(self.engine, "connect", load_spatialite)
             case DatabaseTypeEnum.SUPABASE:
-                self.engine = create_engine(settings.DATABASE_URL_SUPABASE)
+                self.engine = create_engine(env.DATABASE_URL_SUPABASE)
             case DatabaseTypeEnum.POSTGRESQL:
-                self.engine = create_engine(settings.DATABASE_URL_POSTGRES)
+                self.engine = create_engine(env.DATABASE_URL)
         return self.engine
      
     def getSession(self):
@@ -55,7 +59,6 @@ class EngineDb:
             yield database
         finally:
             database.close()
-        
+             
 # Security
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token") 
-print("OAuth2passwordBearer : ", oauth2_scheme)       
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")      

@@ -1,6 +1,6 @@
 from fastapi import HTTPException, Depends, status
 from schema.users import Users_create, User_update, Users
-from models.users import User as user_model
+from models import User as user_model
 from sqlalchemy.orm import Session
 from dto.users import Roles
 from sqlalchemy.exc import DataError
@@ -71,7 +71,7 @@ def get_user_by_email(db, email: str) -> Users:
     except Exception as error:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")
 
-def update_user(id:str, body: User_update, db):
+def update_user(id:str, body: User_update, db: Session):
     newUser = body.model_dump()
     print("newUser", newUser)
     user = db.query(user_model).get({"id": id})
