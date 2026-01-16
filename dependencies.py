@@ -15,13 +15,13 @@ class Env:
     ENV = os.getenv("ENV")
     TOKEN_ALGORITHM = os.getenv("TOKEN_ALGORITHM")
     TOKEN_SECRET = os.getenv("TOKEN_SECRET")
-    ACCESS_TOKEN_EXPIRE_MINUTE = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
+    ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
     REFRESH_TOKEN_EXPIRE_MINUTES = os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES")
     BASE_URL = os.getenv("BASE_URL")
     ORCHESTRATION_URL = os.getenv("ORCHESTRATION_URL")
     
 env = Env()
-print(env.DATABASE_URL)
+print("DATABASE_URL: ", env.DATABASE_URL)
 
 class EngineDb:
     def __init__(self, dataType: DatabaseTypeEnum):

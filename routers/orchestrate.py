@@ -17,12 +17,15 @@ def orchestrate(
     body: ProcessSchema = Body):
     token_data = credentials(token)
     # Use external service = Orchestration Microservice to handle
+    newBody = body.model_dump()
+    newBody["userId"] = token_data.id
+    print("Orchestrate body : ", newBody)
     try:
         httpx.post(
                 f"{env.ORCHESTRATION_URL}/orchestrate",
-                json=body
+                json=newBody
             )
-        return {"mesage": f"Operation : {body.type} in progress"}
+        return {"mesage": f"Operation : {newBody["type"]} in progress"}
     except Exception as error:
         print("Error : ", error)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")

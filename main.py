@@ -2,7 +2,7 @@ from fastapi import FastAPI, Path, Body, Query, Depends, HTTPException, status, 
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from dependencies import oauth2_scheme, EngineDb, env
-from routers import data, process, users, notifications, orchestrate
+from routers import users, notifications, orchestrate
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 from schema.auth import Token
@@ -60,7 +60,7 @@ def login(form_login : OAuth2PasswordRequestForm = Depends(), db: Session = Depe
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token_expires = timedelta(minutes=env.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(minutes=float(env.ACCESS_TOKEN_EXPIRE_MINUTES))
     token = create_access_token(
         data={"sub": user.email, "id": str(user.id) }, expires_delta=access_token_expires
     )
@@ -69,7 +69,7 @@ def login(form_login : OAuth2PasswordRequestForm = Depends(), db: Session = Depe
 @app.post('/signin', tags=['authentication'], summary="Sign in")
 def signin(body: Users_create = Body, db: Session = Depends(database.get_db)) -> Token:
     user = create_user(body, db)
-    access_token_expires = timedelta(minutes=env.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(minutes=float(env.ACCESS_TOKEN_EXPIRE_MINUTES))
     token = create_access_token(
         data={"sub": user.email, "id": str(user.id)}, expires_delta=access_token_expires
     )
@@ -79,7 +79,7 @@ def signin(body: Users_create = Body, db: Session = Depends(database.get_db)) ->
 @app.post('/refresh_token', tags=['authentication'], summary="Refresh Token")
 def refresh_token(refresh_token : str = Depends(oauth2_scheme)):
     token = credentials(refresh_token)
-    access_token_expires = timedelta(minutes=env.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(minutes=float(env.ACCESS_TOKEN_EXPIRE_MINUTES))
     token = create_access_token(
         data={"sub": token.email, "id": str(token.id)}, expires_delta=access_token_expires
     )

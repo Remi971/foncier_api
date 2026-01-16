@@ -23,7 +23,7 @@ services:
       POSTGRES_DB: foncier
       # PGDATA: /var/lib/postgresql/data
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/
     ports:
       - "5434:5432"  # Correction du mapping du port : local:5434 vers container:5432
     networks:
@@ -34,10 +34,19 @@ services:
       timeout: 5s
       retries: 10
 
+  # Redis (pour Celery)
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - ipv6_network
+
   api:
     build: .
     environment:
-      DATABASE_URL : "postgresql://postgres:remi@localhost:5432/foncier"
+      DATABASE_URL : "postgresql://postgres:Gwada971@db:5432/foncier"
       TOKEN_ALGORITHM : "HS256"
       TOKEN_SECRET : "ceef2786ae5f2009f4d8f99b4056cf56a7d4d3eb2350e6606741501242bd0b3e"
       ACCESS_TOKEN_EXPIRE_MINUTES : 15
@@ -46,7 +55,7 @@ services:
       ORCHESTRATION_URL : "http://orchestration:8888"
       MICROSERVICE_SIG : "http://localhost:8880"
     container_name: api
-    command: "uvicorn main:app --host 0.0.0.0 --port 80 --reload"
+    command: "uvicorn main:app --host 0.0.0.0 --port 80"
     networks:
       - ipv6_network
     ports: 
@@ -62,7 +71,7 @@ services:
     environment:
       DATABASE_URL_POSTGRES: postgresql://postgres:Gwada971@db:5432/foncier
     container_name: sig
-    command: "uvicorn main:app --host 0.0.0.0 --port 8880 --reload"
+    command: "uvicorn main:app --host 0.0.0.0 --port 8880"
     networks:
       - ipv6_network
     ports: 
@@ -70,15 +79,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-  
-    # Redis (pour Celery)
-  redis:
-    image: redis:alpine
-    container_name: redis
-    ports:
-      - "6379:6379"
-    networks:
-      - ipv6_network
 
   # API orchestration:
   orchestration:
@@ -98,6 +98,7 @@ services:
       CARTOFONCIER_API_URL : "http://app:8080"
       MICROSERVICE_SIG : "http://localhost:8880"
       BROKER_URL : "redis://redis:6379/0"
+      BASE_URL: "http://localhost:8888"
     networks:
       - ipv6_network
     depends_on:
@@ -128,6 +129,7 @@ services:
       CARTOFONCIER_API_URL : "http://app:8080"
       MICROSERVICE_SIG : "http://localhost:8880"
       BROKER_URL : "redis://redis:6379/0"
+      BASE_URL: "http://localhost:8888"
   
 volumes:
   pg_data:

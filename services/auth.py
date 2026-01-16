@@ -53,8 +53,8 @@ def create_access_token(data: None, expires_delta: timedelta | None = None):
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=5)
-    refresh_expire = datetime.now(timezone.utc) + timedelta(minutes=env.REFRESH_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=5.0)
+    refresh_expire = datetime.now(timezone.utc) + timedelta(minutes=float(env.REFRESH_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     access_token = jwt.encode(to_encode, env.TOKEN_SECRET, algorithm=env.TOKEN_ALGORITHM)
     

@@ -24,7 +24,7 @@ def getDb():
 @router.post('/signin', tags=['authentication'])
 def signin(body: Users_create = Depends(), db: Session = Depends(getDb)) -> Token:
     user = create_user(body, db)
-    access_token_expires = timedelta(minutes=env.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(minutes=float(env.ACCESS_TOKEN_EXPIRE_MINUTES))
     token = create_access_token(
         data={"sub": user.email, "id": str(user.id)}, expires_delta=access_token_expires
     )
@@ -41,7 +41,7 @@ def login(form_login : OAuth2PasswordRequestForm = Depends(), db: Session = Depe
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token_expires = timedelta(minutes=env.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(minutes=float(env.ACCESS_TOKEN_EXPIRE_MINUTES))
     token = create_access_token(
         data={"sub": user.email, "id": str(user.id) }, expires_delta=access_token_expires
     )

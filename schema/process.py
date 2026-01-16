@@ -10,6 +10,7 @@ class PotentielLayer(BaseModel):
     geom : bytes
     
 class ProcessSchema(BaseModel):
-    type: ProcessType
+    type: str
     parameters: PotentielParamsDto | EnveloppeParamsDto | CommuneDto
-    userId: str
+    def __setattr__(self, name, value):
+        return super().__setattr__(name, value)
