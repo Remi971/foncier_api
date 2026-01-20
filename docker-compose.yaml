@@ -70,6 +70,11 @@ services:
     build: ../foncier_sig
     environment:
       DATABASE_URL_POSTGRES: postgresql://postgres:Gwada971@db:5432/foncier
+      ORCHESTRATION_URL : "http://orchestration:8888"
+      MINIO_SECRET_KEY : "minioadmin"
+      MINIO_ACCESS_KEY : "minioadmin"
+      MINIO_ENDPOINT : "http://minio:9000"
+      MINIO_BUCKET_NAME : "cartofoncier"
     container_name: sig
     command: "uvicorn main:app --host 0.0.0.0 --port 8880"
     networks:
@@ -96,7 +101,7 @@ services:
       MINIO_ENDPOINT : "http://minio:9000"
       MINIO_BUCKET_NAME : "cartofoncier"
       CARTOFONCIER_API_URL : "http://app:8080"
-      MICROSERVICE_SIG : "http://localhost:8880"
+      MICROSERVICE_SIG : "http://sig:8880"
       BROKER_URL : "redis://redis:6379/0"
       BASE_URL: "http://localhost:8888"
     networks:
@@ -127,7 +132,7 @@ services:
       MINIO_ENDPOINT : "http://minio:9000"
       MINIO_BUCKET_NAME : "cartofoncier"
       CARTOFONCIER_API_URL : "http://app:8080"
-      MICROSERVICE_SIG : "http://localhost:8880"
+      MICROSERVICE_SIG : "http://sig:8880"
       BROKER_URL : "redis://redis:6379/0"
       BASE_URL: "http://localhost:8888"
   
