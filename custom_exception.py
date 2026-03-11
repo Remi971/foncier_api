@@ -1,0 +1,2 @@
+class ExceptionNotFound(BaseException):
+    pass

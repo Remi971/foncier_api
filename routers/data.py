@@ -1,91 +1,77 @@
-# from fastapi import APIRouter, Depends, BackgroundTasks, status, HTTPException, Body
-# from fastapi.responses import JSONResponse
-# from fastapi.encoders import jsonable_encoder
-# from services.data import get_data, check_data_commune, check_data_enveloppe, check_data_potentiel, clean_data, download_potentiel_layer
-# from services.auth import credentials
-# from services.notifications import Notifiyer
-# from dependencies import oauth2_scheme
-# from schema.notifications import NotificationsModel
-# from schema.data import CommuneDto
-# from dto.notifications import NotificationsStatusEnum, NotificationsTypeEnum, NotificationsState
-# from sqlalchemy.orm import Session
-# from dependencies import EngineDb
-# from dto.database import DatabaseTypeEnum
+from fastapi import APIRouter, Depends, status, HTTPException, Body
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
+from services.data import get_data_enveloppe, get_data_commune, delete_data_enveloppe, check_data_potentiel, clean_data, download_potentiel_layer
+from services.auth import credentials
+from services.orchestration import save_data
+from dependencies import oauth2_scheme
+from dto.process import DataFormat
+from sqlalchemy.orm import Session
+from dependencies import EngineDb
+from dto.database import DatabaseTypeEnum
+from custom_exception import ExceptionNotFound
+import json
 
-# router = APIRouter(
-#     prefix="/data"
-# )
+router = APIRouter(
+    prefix="/data"
+)
 
-# def getDb():
-#     database = EngineDb(DatabaseTypeEnum.POSTGRESQL).getSession()
-#     try:
-#         yield database
-#     finally:
-#         database.close()
+database = EngineDb(DatabaseTypeEnum.POSTGRESQL)
 
-# @router.post('/add/sqlite', tags=["Data"], summary="Add PCI-Vector Data to Database", status_code=status.HTTP_202_ACCEPTED)
-# def adding_data_to_db(
-#     background_tasks: BackgroundTasks,
-#     body: CommuneDto= Body(),
-#     token: str = Depends(oauth2_scheme),
-#     db_psql: Session = Depends(getDb),
-#     db: Session = Depends(getDb),
-#     ):
-#     try:
-#         token_data = credentials(token)
-#         #TODO: Indiquer dans la base de donnée qu'un traitement est en cours
-#         newNotif: NotificationsModel = {
-#             "message": "L'acquisition des données est en cours",
-#             "status": NotificationsStatusEnum.PENDING,
-#             "type": NotificationsTypeEnum.DATA,
-#             "recipient": token_data.id
-#         }
-#         notification = Notifiyer(state=NotificationsState.CREATION, db=db_psql, notif=newNotif, id=None)
-#         notifId = notification.action()
-#         background_tasks.add_task(get_data,body, notifId,db_psql, db)
-#         return {"message": "Acquisition des données en cours"}
-#     except Exception as error:
-#         print(body)
-#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f'{error}')
-    
-# @router.get('/commune', tags=["Data"], summary="Get info about commune data and the geojson layer")
-# def checkDataCommune(
-#     token: str = Depends(oauth2_scheme),
-# ):
-#     token_data = credentials(token)
-#     info = check_data_commune()
-#     return JSONResponse(content=jsonable_encoder(info))
+@router.get('/commune', tags=['Data'], summary="Check if commune data present in bucket")
+def checkDataCommune(
+    token: str = Depends(oauth2_scheme)
+) -> JSONResponse:
+    try:
+        token_data = credentials(token)
+        # get commune information from bucket
+        return get_data_commune(token_data.id, database.engine)
+    except ExceptionNotFound as error:
+        raise HTTPException(status_code=status.HTTP_204_NO_CONTENT, detail=f"{error}")
+    except Exception as error:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")
 
-# @router.get('/enveloppe', tags=["Data"], summary="Get info about enveloppe data and the geojson layer")
-# def checkDataEnveloppe(
-#     token: str = Depends(oauth2_scheme),
-# ):
-#     token_data = credentials(token)
-#     info = check_data_enveloppe()
-#     return JSONResponse(content=jsonable_encoder(info))
+@router.get('/enveloppe', tags=["Data"], summary="Get info about enveloppe data and the geojson layer")
+def checkDataEnveloppe(
+    token: str = Depends(oauth2_scheme),
+) -> JSONResponse:
+    try:
+        token_data = credentials(token)
+        # get Enveloppe générée par l'utilisateur ID
+        enveloppe_data = get_data_enveloppe(token_data.id, database.engine)
+        info = {}
+        if len(enveloppe_data["features"]):
+            for key in enveloppe_data["features"][0]["properties"].keys():
+                if key not in ['user']:
+                    info[key] = enveloppe_data["features"][0]["properties"][key]
+            content = {'info': info, 'data': enveloppe_data}
+            return JSONResponse(content=jsonable_encoder(content))
+        else:
+            # raise ExceptionNotFound(name="enveloppe")
+            raise ExceptionNotFound("The user don't have any enveloppe created yet.")
+    except ExceptionNotFound as error:
+        raise HTTPException(status_code=status.HTTP_204_NO_CONTENT, detail=f"{error}")
+    except Exception as error:
+        print(f"Error fetching enveloppe data : {error}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")
 
-# @router.get('/potentiel', tags=["Data"], summary="Get info about potentiel data and the geojson layer")
-# def checkDataPotentiel(
-#     token: str = Depends(oauth2_scheme),
-# ):
-#     token_data = credentials(token)
-#     info = check_data_potentiel()
-#     return JSONResponse(content=jsonable_encoder(info))
+@router.post('/enveloppe', tags=['Data'], summary='Save edited enveloppe layer in database')
+def save_enveloppe(
+    token: str = Depends(oauth2_scheme),
+    body: DataFormat = Body(),
+    db: Session = Depends(database.get_db)
+) -> JSONResponse:
+    try:
+        token_data = credentials(token)
+        #TODO: Remove the row in database where user = token_data.id and code_insee = body.data['features'][0]['properties']['code_insee'] and type = 'enveloppe'
+        parseData = body.model_dump()
+        data = json.loads(parseData["data"])
+        delete_data_enveloppe(token_data.id, data['features'][0]['properties']['code_insee'], database.engine)
+        save_data(parseData)
+        return parseData
+    except Exception as error:
+        print(f"Error saving enveloppe data : {error}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")
 
-# @router.delete('/', tags=["Data"])
-# def cleanDatabase(
-#     background_tasks: BackgroundTasks,
-#     token: str = Depends(oauth2_scheme),
-#     db: Session = Depends(getDb)
-# ):
-#     token_data = credentials(token)
-#     background_tasks.add_task(clean_data,db)
-#     return {"message", "La base de données local est en cours de nettoyage."}
 
-# @router.get('/potentiel/download', tags=["Data"], summary="Download potentiel geojson layer")
-# def downloadPotentiel(
-#     token: str = Depends(oauth2_scheme),
-# ):
-#     token_data = credentials(token)
-#     return download_potentiel_layer()
     

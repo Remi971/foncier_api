@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from dto.process import PotentielParamsDto, EnveloppeParamsDto, CommuneDto, ProcessType
     
 class PotentielLayer(BaseModel):
@@ -10,7 +10,8 @@ class PotentielLayer(BaseModel):
     geom : bytes
     
 class ProcessSchema(BaseModel):
-    type: str
+    model_config = ConfigDict(use_enum_values=True)
+    type: ProcessType
     parameters: PotentielParamsDto | EnveloppeParamsDto | CommuneDto
     def __setattr__(self, name, value):
         return super().__setattr__(name, value)

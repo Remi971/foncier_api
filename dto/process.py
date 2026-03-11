@@ -1,7 +1,18 @@
 from pydantic import BaseModel
 from enum import Enum
 
-class PotentielParamsDto(BaseModel):
+   
+   
+class Centre(BaseModel):
+    type: str
+    coordinates: list[float]
+class CommuneDto(BaseModel):
+    code: str
+    nom: str
+    centre: Centre
+    
+    
+class PotentielParamsDto(CommuneDto):
     minSurfParNue: int = 400 # Surface minimale de la parcelle non bâtie
     minSurfParBatie: int = 1000 # Surface minimale de la parcelle bâtie
     maxCes: int = 50 # CES maximum de la parcelle bâtie
@@ -9,7 +20,7 @@ class PotentielParamsDto(BaseModel):
     distBufferTest: int = 10 # Distance du buffer pour le test
     distBufferBati: int = 8 # Distance du buffer autour du bâti
     
-class EnveloppeParamsDto(BaseModel):
+class EnveloppeParamsDto(CommuneDto):
     minSurfBati: int = 30 # Surface minimale du Bâti
     bufferBati: int = 4 # Buffer autour du bâti
     dilatation: int = 50 # Distance Buffer pour la dilatation
@@ -18,13 +29,12 @@ class EnveloppeParamsDto(BaseModel):
     maxSurfTrou: int = 2000 # Surface maximale des trous à combler
     minSurfEnv: int = 30000 # Surface minimale des enveloppes
     maxSurfResidus: int = 5 # Surface maximale des résidus à supprimer
-    
-class CommuneDto(BaseModel):
-    code_insee: str
-    nom: str
-    
 class ProcessType(Enum):
     DATA_DOWNLOAD = "DATA_DOWNLOAD"
     DATA_PROCESSING = "DATA_PROCESSING"
     POTENTIEL_CALCULATION = "POTENTIEL_CALCULATION"
     ENVELOPPE_GENERATION = "ENVELOPPE_GENERATION"
+    
+class DataFormat(BaseModel):
+    type: str
+    data: str

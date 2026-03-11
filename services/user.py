@@ -10,8 +10,7 @@ from psycopg2.errorcodes import UNIQUE_VIOLATION
 from psycopg2 import errors
 
 
-def create_user(body: Users_create, db: Session):
-    newUser = body.model_dump()
+def create_user(newUser: Users_create, db: Session):
     #Check if exists
     user = db.query(user_model).filter(user_model.email == newUser["email"]).first()
     if user:
@@ -41,6 +40,7 @@ def authenticate_user(db, username: str, password: str) -> Users:
 def get_current_user(db, email) -> Users:
     try:
         user = get_user_by_email(db, email=email)
+        print("get_current_user", user)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user
@@ -53,7 +53,8 @@ def get_user(id: str, db: Session):
         return user
     except DataError:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"invalid input syntax for type uuid: {id}")
-        
+
+
 def get_all_users(db: Session):
     try:
         users = db.query(user_model).all()   
@@ -64,6 +65,7 @@ def get_all_users(db: Session):
 def get_user_by_email(db, email: str) -> Users:
     print("email", email) 
     user = db.query(user_model).filter(user_model.email == email).all()
+    print("get_user_by_email", user)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     try:

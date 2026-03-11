@@ -5,7 +5,7 @@ description = "API de l'app fonciere"
 authors = [{name = "Remi Bhagalou", email = "remi.bha@gmail.com"}]
 readme = "README.md"
 requires-python = ">=3.13"
-package-mode = false
+# package-mode = false
 dependencies = [
     "alembic>=1.16.5",
     "bcrypt>=5.0.0",

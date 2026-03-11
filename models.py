@@ -1,8 +1,9 @@
-from sqlalchemy import Column, String, TIMESTAMP, text, ForeignKey, Integer
+from sqlalchemy import Column, String, TIMESTAMP, text, ForeignKey, Integer, Float
 from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.dialects.postgresql import UUID
 from dto.users import Roles
 import uuid
+from geoalchemy2 import Geometry
 
 Base = declarative_base() 
 
@@ -37,3 +38,30 @@ class Notification(Base):
     status = Column(String)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, default=text('Now()'))
     updated_at = Column(TIMESTAMP(timezone=True), nullable=False, default=text('Now()'), server_onupdate=text('Now()'))
+
+class Enveloppe(Base):
+    __tablename__='enveloppe'
+    id = Column(Integer, primary_key=True)
+    nom = Column(String)
+    code_insee = Column(String)
+    minSurfBati = Column(Integer)
+    bufferBati = Column(Integer)
+    dilatation = Column(Integer)
+    erosion = Column(Integer)
+    minPartInBuffer = Column(Integer)
+    maxSurfTrou = Column(Integer)
+    maxSurfEnv = Column(Integer)
+    maxSurfResidus = Column(Integer)
+    user = Column(String)
+    geom = Column(Geometry('POLYGON', srid=3857))
+    
+class Commune(Base):
+    __tablename__ = 'communes'
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, index=True, nullable=False, unique=True, default=uuid.uuid4)
+    code = Column(String, index=True, nullable=False)
+    userId = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    nom = Column(String, index=True, nullable=False)
+    long = Column(Float, nullable=False)
+    lat = Column(Float, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, default=text('Now()'))

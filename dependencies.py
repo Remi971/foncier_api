@@ -37,7 +37,10 @@ class EngineDb:
             case DatabaseTypeEnum.SUPABASE:
                 self.engine = create_engine(env.DATABASE_URL_SUPABASE)
             case DatabaseTypeEnum.POSTGRESQL:
-                self.engine = create_engine(env.DATABASE_URL)
+                self.engine = create_engine(
+                    env.DATABASE_URL, 
+                    # plugins=['geoalchemy2'], 
+                    echo=True)
         return self.engine
      
     def getSession(self):
