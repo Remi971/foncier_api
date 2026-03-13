@@ -12,14 +12,10 @@ from datetime import timedelta
 from pydantic import EmailStr
 from dto.database import DatabaseTypeEnum
 from models import Base
-#TEST
-from schema.notifications import Notifications, NotificationsMessage
-from services.notifications import Notifiyer, get_last_notif
-from dto.notifications import NotificationsState, NotificationsStatusEnum, NotificationsTypeEnum
-from custom_exception import ExceptionNotFound
 origins = env.BASE_URL.split(",")
 
 database = EngineDb(DatabaseTypeEnum.POSTGRESQL)
+
 
 @asynccontextmanager
 async def init_db(app: FastAPI):
@@ -105,39 +101,3 @@ def read_users_me(token: str = Depends(oauth2_scheme), db: Session = Depends(dat
 def reset_password(email: EmailStr):
     ...
     
-#TODO : protect the websocket endpoints
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Depends(database.get_db)):
-    token_data = credentials(token)
-    await websocket.accept()
-    while True:
-        try:
-            #TODO: function that check the state of last notifications - après 5min si status pending update en error
-            data = await websocket.receive_text()
-            # last_notif = get_last_notif()
-            # await websocket.send_json({
-            #     "id": str(last_notif.id), 
-            #     "message": last_notif.message, 
-            #     "status": last_notif.status,
-            #     "type": last_notif.type,
-            #     "recipient": last_notif.recipient})
-        except Exception as error:
-            print(f"Webscoket Error : {error}")
-            break
-    
-@app.delete("/notif/{id}", tags=["TEST"])
-def deleteNotif(
-    id: str = Path,
-    db: Session = Depends(database.get_db),
-    token: str = Depends(oauth2_scheme), 
-):
-    token_data = credentials(token)
-    notif = Notifiyer(state=NotificationsState.DELETE, db=db, notif=None, id=id)
-    delete = notif.action()
-    return delete
-    
-@app.get("/notif", tags=['TEST'])
-def getLastNotif(
-    db: Session = Depends(database.get_db),
-):
-    return get_last_notif(db)

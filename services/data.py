@@ -23,7 +23,7 @@ def check_data_commune() :
 
 def get_data_commune(userId: str, engine: Engine) -> JSONResponse: 
     session = Session(engine)
-    lastCommune  = session.query(Commune).filter(Commune.userId == userId).order_by(Commune.created_at).first()
+    lastCommune  = session.query(Commune).filter(Commune.userId == userId).order_by(Commune.created_at.desc()).first()
     if lastCommune:
         data = {
             "nom": lastCommune.nom,

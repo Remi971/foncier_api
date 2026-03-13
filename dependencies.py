@@ -19,6 +19,10 @@ class Env:
     REFRESH_TOKEN_EXPIRE_MINUTES = os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES")
     BASE_URL = os.getenv("BASE_URL")
     ORCHESTRATION_URL = os.getenv("ORCHESTRATION_URL")
+    REDIS_HOST = os.getenv("REDIS_HOST")
+    REDIS_PORT = os.getenv("REDIS_PORT")
+    REDIS_DB = os.getenv("REDIS_DB")
+    REDIS_CHANNEL = os.getenv("REDIS_CHANNEL")
     
 env = Env()
 print("DATABASE_URL: ", env.DATABASE_URL)

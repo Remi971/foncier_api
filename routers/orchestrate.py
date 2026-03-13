@@ -4,12 +4,15 @@ from services.auth import credentials
 from dto.database import DatabaseTypeEnum
 from schema.process import ProcessSchema
 import httpx
+from publisher import Publisher
 
 router = APIRouter(
     prefix="/orchestrate"
 )
 
 database = EngineDb(DatabaseTypeEnum.POSTGRESQL)
+
+publisher = Publisher()
 
 @router.post('/', tags=['Orchestrate'], summary="Call the orchestration Microservice to handle data and processing subject")
 def orchestrate(
@@ -21,6 +24,12 @@ def orchestrate(
     newBody["userId"] = token_data.id
     print("Orchestrate body : ", newBody)
     try:
+        publisher.publish_event(
+            "data:processing", {
+                "type": newBody["type"], 
+                "status": "STARTED", 
+                "message": f"{newBody['type']} started"
+                })
         httpx.post(
                 f"{env.ORCHESTRATION_URL}/orchestrate",
                 json=newBody
