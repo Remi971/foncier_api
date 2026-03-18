@@ -37,13 +37,6 @@ def authenticate_user(db, username: str, password: str) -> Users:
         return False
     return user
 
-def get_current_user(db, email) -> Users:
-    try:
-        user = get_user_by_email(db, email=email)
-        print("get_current_user", user)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    return user
     
 def get_user(id: str, db: Session):
     try:

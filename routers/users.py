@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Body, Path, Depends, HTTPException
 from sqlalchemy.orm import Session
 from schema.users import Users, User_update
-from services.user import create_user, update_user, delete_user, get_user, get_current_user, get_all_users
+from services.user import create_user, update_user, delete_user, get_user, get_all_users, get_user_by_email
 from dependencies import EngineDb, oauth2_scheme
 from services.auth import credentials
 from dto.database import DatabaseTypeEnum
@@ -32,7 +32,7 @@ def update(
 @router.get("/me", tags=["User"], summary="Get My Profile")
 def get_my_profile(db: Session = Depends(database.get_db), token: str = Depends(oauth2_scheme)):
     token_data = credentials(token)
-    return get_current_user(db, token_data.email)
+    return get_user_by_email(db, email=token_data.email)
 
 @router.get("/{id}", tags=["User"], summary="Get One User")
 def get(id : str = Path, db: Session = Depends(database.get_db), token: str = Depends(oauth2_scheme)):

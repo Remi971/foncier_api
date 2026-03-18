@@ -12,12 +12,13 @@ router = APIRouter(
 
 database = EngineDb(DatabaseTypeEnum.POSTGRESQL)
 
-publisher = Publisher()
+# publisher = Publisher()
 
 @router.post('/', tags=['Orchestrate'], summary="Call the orchestration Microservice to handle data and processing subject")
 def orchestrate(
     token: str = Depends(oauth2_scheme), 
-    body: ProcessSchema = Body):
+    body: ProcessSchema = Body,
+    publisher=Depends(Publisher)):
     token_data = credentials(token)
     # Use external service = Orchestration Microservice to handle
     newBody = body.model_dump()
@@ -37,4 +38,10 @@ def orchestrate(
         return {"mesage": f"Operation : {newBody["type"]} in progress"}
     except Exception as error:
         print("Error : ", error)
+        publisher.publish_event(
+            "data:processing", {
+                "type": newBody["type"], 
+                "status": "FAILED", 
+                "message": f"{newBody['type']} failed"
+                })
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")

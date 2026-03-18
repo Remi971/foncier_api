@@ -37,9 +37,9 @@ def get_data_commune(userId: str, engine: Engine) -> JSONResponse:
     else:
         raise ExceptionNotFound("No commune data found for this user.")
     
-def get_data_enveloppe(userId: str, engine: Engine) :
+def get_data_enveloppe(userId: str, code: str, engine: Engine) :
     try:
-        sql = f"SELECT * FROM enveloppe WHERE enveloppe.user='{userId}';"
+        sql = f"SELECT * FROM enveloppe WHERE enveloppe.user='{userId}' AND enveloppe.code='{code}';"
         gdf = gpd.GeoDataFrame.from_postgis(sql, engine)
         geojson = gdf.to_geo_dict()
         print("CRS : ", gdf.crs)
@@ -49,6 +49,24 @@ def get_data_enveloppe(userId: str, engine: Engine) :
         # return {"data": enveloppe.to_geojson(), "info": enveloppe_info.getInfo()}
     except Exception as error:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{error}")
+    
+def save_data_enveloppe(enveloppe: dict, engine: Engine):
+    try:
+        crs = {'init': 'epsg:4326'}
+        gdf = gpd.GeoDataFrame.from_features(enveloppe["features"], crs=crs)
+        # gdf.crs = 3857
+        # gdf.geometry = gdf.geometry.to_crs("EPSG:4326")
+        gdf.rename_geometry('geom', inplace=True)
+        columns_to_keep = ['geom', 'nom', 'code', 'minSurfBati', 'bufferBati', 'dilatation', 'maxSurfResidus', 'user', 'erosion', 'minPartInBuffer', 'maxSurfTrou', 'minSurfEnv']
+        for column in gdf.columns:
+            if column not in columns_to_keep:
+                gdf.drop(column, axis=1, inplace=True)
+        print("##### gdf columns : ", gdf.columns)
+        gdf = gdf.explode()
+        gdf.to_postgis("enveloppe", engine, if_exists='append')
+    except Exception as error:
+        print(f"Saving The Enveloppe failed with error : {error}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 def check_data_potentiel() :
     try:
